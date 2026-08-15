@@ -37,7 +37,9 @@ export function DomainCard({
   return (
     <section
       className={cn(
-        "min-w-0 overflow-hidden rounded border border-line bg-card shadow-card",
+        // rounded-md, not bare `rounded`: the bare utility reads Tailwind v4's
+        // deprecated --radius key, which is one more thing that has to be right.
+        "min-w-0 overflow-hidden rounded-md border border-line bg-card shadow-card",
         "border-t-edge", // 4px top border width
         edgeClass[edge],
         className

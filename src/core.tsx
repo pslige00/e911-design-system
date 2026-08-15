@@ -2,27 +2,15 @@
 
 import * as React from "react";
 
-/* ---------------------------------------------------------------- utils -- */
-export function cn(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(" ");
-}
+// The data half of the system lives in contract.ts, which has no "use client".
+// Re-exported here so existing imports from "./core" keep working — but note
+// that a re-export through this module is still a client re-export. Server
+// components must import from the package root (which points at contract.ts)
+// or from "./contract" directly. See the comment in contract.ts.
+export { cn, DOMAIN_EDGE } from "./contract";
+export type { Tone, EdgeColor } from "./contract";
 
-/* ------------------------------------------------------------------ types */
-export type Tone = "ok" | "warn" | "bad";
-export type EdgeColor = "orange" | "teal" | "gold" | "green" | "plum" | "blue";
-
-/** Domain → edge-color contract (see SKILL.md). One domain, one hue, everywhere. */
-export const DOMAIN_EDGE: Record<
-  "operations" | "roster" | "certifications" | "qa" | "training" | "facilities",
-  EdgeColor
-> = {
-  operations: "orange",
-  roster: "teal",
-  certifications: "gold",
-  qa: "green",
-  training: "plum",
-  facilities: "blue",
-};
+import { cn, type EdgeColor, type Tone } from "./contract";
 
 /* ----------------------------------------------------------------- Button */
 type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";

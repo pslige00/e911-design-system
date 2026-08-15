@@ -27,6 +27,13 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
    `--focus-ring`, 2px, offset 2.
 6. **Dark mode is free — keep it free.** Never branch on theme in app code;
    `[data-theme="dark"]` swaps the same semantic names.
+7. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component
+   module.** Every component is `"use client"`; a value re-exported through a
+   client module reaches a React Server Component as a client-reference proxy,
+   so `DOMAIN_EDGE.operations` is not `"orange"`. `DomainCard` then matches no
+   hue and renders a 4px top edge in the default border colour — **no error, no
+   warning, just the wrong card.** The root export points at `contract.ts`,
+   which has no `"use client"`, and is safe from either side.
 
 ## The layout pattern ("Terrazzo × Solstice")
 

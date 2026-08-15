@@ -113,9 +113,15 @@
   --text-mono: var(--font-size-mono);
   --text-mono--line-height: 1.4;
 
-  /* radii — three tokens and a pill, nothing else. `md` is the card radius and
-     is also what bare `rounded` resolved to under the v3 preset's DEFAULT key.
-     Components use the explicit `rounded-md`. */
+  /* radii — three tokens and a pill, nothing else.
+
+     `--radius` (no suffix) is Tailwind v4's deprecated-but-still-live key behind
+     the bare `rounded` utility. It is NOT covered by `--radius-md`, and if left
+     unset it silently falls back to Tailwind's own 0.25rem — so a component
+     written as `rounded` renders a 4px corner instead of the system's 10px, with
+     no build error. The v3 preset never had this problem because it defined a
+     DEFAULT key. Setting it keeps the two ports honest. */
+  --radius:      var(--e911-radius-md);
   --radius-sm:   var(--e911-radius-sm);
   --radius-md:   var(--e911-radius-md);
   --radius-lg:   var(--e911-radius-lg);
