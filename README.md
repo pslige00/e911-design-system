@@ -15,7 +15,7 @@ to consume it.
 | `tokens/tokens.scss` | Primitives as SCSS vars — build-time math only. |
 | `tokens/spec.html` | Living spec, tokens inlined. Open directly in a browser — no build step. |
 | `tokens/SKILL.md` | Claude Code skill — copy into every consuming app repo. |
-| `src/` | React component library (`AppShell`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`). |
+| `src/` | React component library. Shell + data: `AppShell`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`. Interaction primitives: `Dialog`/`DangerDialog`, `Select`, `Tabs`/`TabPanel`, `ToastProvider`/`useToast`, `DateField`, `Pagination`, `Tooltip`. |
 | `SETUP.md` | **Start here** — how a separate app repo installs and wires this up. |
 
 ## The five rules (short form)

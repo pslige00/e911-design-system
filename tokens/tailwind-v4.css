@@ -126,6 +126,7 @@
   --spacing-row:    var(--row-height);
   --spacing-ctl:    var(--control-height);
   --spacing-ctl-sm: var(--control-height-sm);
+  --spacing-tap:    var(--tap-target);
 
   /* motion. One curve for the whole system. */
   --ease-e911: var(--e911-ease);
@@ -156,6 +157,13 @@
 /* transition-duration */
 @utility duration-fast { transition-duration: var(--e911-dur-fast); }
 @utility duration-base { transition-duration: var(--e911-dur); }
+
+/* z-index: v4 resolves `z-<number>` arithmetically and has no theme namespace to
+   hang names off, so the floating-layer scale has to be real utilities here even
+   though the v3 preset expresses it as theme.zIndex. Same names either way. */
+@utility z-popover { z-index: var(--layer-popover); }
+@utility z-dialog  { z-index: var(--layer-dialog); }
+@utility z-toast   { z-index: var(--layer-toast); }
 
 /* elevation. Declared as utilities rather than @theme because tokens.css
    already owns the names `--shadow-card` / `--shadow-pop`, and v4's shadow

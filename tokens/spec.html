@@ -137,10 +137,16 @@
   /* component metrics (density: Terrazzo) */
   --control-height: 32px;
   --control-height-sm: 28px;
+  --tap-target: 44px;              /* touch floor (wall tablets) */
   --row-height: 40px;
   --card-padding: var(--e911-space-4);
   --card-edge-width: 4px;          /* the colored top edge */
   --rail-width: 64px;
+
+  /* floating-layer order: popover < dialog < toast */
+  --layer-popover: 50;
+  --layer-dialog:  60;
+  --layer-toast:   70;
 
   /* type scale (display face: headings + KPI numerals only) */
   --font-size-body: 13.5px;

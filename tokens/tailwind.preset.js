@@ -70,6 +70,10 @@ export default {
       borderRadius: {
         sm: "var(--e911-radius-sm)",     /* 8px  — chips, inputs   */
         DEFAULT: "var(--e911-radius-md)",/* 10px — cards           */
+        md: "var(--e911-radius-md)",     /* 10px — same, spelled out; without
+                                            this key `rounded-md` silently falls
+                                            through to Tailwind's own 6px, which
+                                            is not one of the three radii. */
         lg: "var(--e911-radius-lg)",     /* 14px — ribbon, dialogs */
         pill: "var(--e911-radius-pill)",
       },
@@ -78,6 +82,12 @@ export default {
         row: "var(--row-height)",
         ctl: "var(--control-height)",
         "ctl-sm": "var(--control-height-sm)",
+        tap: "var(--tap-target)", /* min-h-tap / size-tap — the touch floor */
+      },
+      zIndex: {
+        popover: "var(--layer-popover)",
+        dialog: "var(--layer-dialog)",
+        toast: "var(--layer-toast)",
       },
       boxShadow: {
         card: "var(--shadow-card)",

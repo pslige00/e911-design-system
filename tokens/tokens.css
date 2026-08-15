@@ -127,10 +127,20 @@
   /* component metrics (density: Terrazzo) */
   --control-height: 32px;
   --control-height-sm: 28px;
+  --tap-target: 44px;              /* touch floor — these apps run on wall tablets,
+                                      so anything finger-reachable is ≥ this, even
+                                      when its painted box is --control-height */
   --row-height: 40px;
   --card-padding: var(--e911-space-4);
   --card-edge-width: 4px;          /* the colored top edge */
   --rail-width: 64px;
+
+  /* floating-layer order. One scale so a popover opened inside a dialog stacks
+     above the panel, and a toast confirming that dialog's action stacks above
+     both. Hard-coding z-index per component is how those three end up fighting. */
+  --layer-popover: 50;
+  --layer-dialog:  60;
+  --layer-toast:   70;
 
   /* type scale (display face: headings + KPI numerals only) */
   --font-size-body: 13.5px;
