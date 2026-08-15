@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "./core";
 
@@ -9,10 +11,29 @@ export interface RailItem {
   href?: string;
 }
 
+/**
+ * Renders one rail destination. Supplied by the app so a router-aware link
+ * (Next's <Link>, react-router's <NavLink>) can own navigation; without it an
+ * `href` item falls back to a plain <a>. The rail is the app's primary nav, so
+ * these must be real links — a <button> breaks middle-click, copy-link, and
+ * prefetch, and makes every destination invisible to the router.
+ */
+export type RailLinkRenderer = (props: {
+  href: string;
+  className: string;
+  children: React.ReactNode;
+  "aria-label": string;
+  "aria-current": "page" | undefined;
+  title: string;
+}) => React.ReactNode;
+
 export interface AppShellProps {
   items: RailItem[];
   activeId: string;
+  /** Called for items with no `href`. Items WITH an href navigate instead. */
   onNavigate?: (id: string) => void;
+  /** Router-aware link component for items carrying an `href`. */
+  renderLink?: RailLinkRenderer;
   /** Footer slot — user avatar, settings */
   railFooter?: React.ReactNode;
   children: React.ReactNode;
@@ -22,7 +43,14 @@ export interface AppShellProps {
  * The Terrazzo shell: 64px icon rail + dot-grid canvas.
  * Wrap once per app; put the Ribbon + page content in children.
  */
-export function AppShell({ items, activeId, onNavigate, railFooter, children }: AppShellProps) {
+export function AppShell({
+  items,
+  activeId,
+  onNavigate,
+  renderLink,
+  railFooter,
+  children,
+}: AppShellProps) {
   return (
     <div className="e911-app grid min-h-screen grid-cols-[var(--rail-width)_1fr] max-md:grid-cols-1">
       <nav
@@ -37,20 +65,38 @@ export function AppShell({ items, activeId, onNavigate, railFooter, children }: 
         </div>
         {items.map((it) => {
           const active = it.id === activeId;
+          const className = cn(
+            "grid size-10 place-items-center rounded-sm transition duration-fast ease-e911",
+            active ? "bg-brand-soft text-brand-text" : "text-faint hover:bg-tint hover:text-ink"
+          );
+          const shared = {
+            "aria-label": it.label,
+            "aria-current": active ? ("page" as const) : undefined,
+            title: it.label,
+          };
+
+          if (it.href) {
+            const children = it.icon;
+            return (
+              <React.Fragment key={it.id}>
+                {renderLink
+                  ? renderLink({ href: it.href, className, children, ...shared })
+                  : // No router supplied — a plain anchor still navigates correctly,
+                    // it just costs a full page load.
+                    <a href={it.href} className={className} {...shared}>
+                      {children}
+                    </a>}
+              </React.Fragment>
+            );
+          }
+
           return (
             <button
               key={it.id}
               type="button"
-              aria-label={it.label}
-              aria-current={active ? "page" : undefined}
-              title={it.label}
               onClick={() => onNavigate?.(it.id)}
-              className={cn(
-                "grid size-10 place-items-center rounded-sm transition duration-fast ease-e911",
-                active
-                  ? "bg-brand-soft text-brand-text"
-                  : "text-faint hover:bg-tint hover:text-ink"
-              )}
+              className={className}
+              {...shared}
             >
               {it.icon}
             </button>

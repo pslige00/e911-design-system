@@ -1,0 +1,175 @@
+/* ============================================================================
+   E911 DESIGN SYSTEM — Tailwind v4 mapping
+   v1.0.0 · "Terrazzo × Solstice" / "Grotesk Standard"
+
+   The v4 counterpart to tailwind.preset.js. It produces the SAME utility names
+   from the SAME CSS variables — it defines no values of its own. tokens.css
+   remains the single source of truth; if a number here isn't a var(), it's a bug.
+
+   Usage (app's globals.css, in this order):
+     @import "tailwindcss";
+     @import "@e911/design-system/tokens.css";
+     @import "@e911/design-system/tailwind-v4.css";
+     @source "../../node_modules/@e911/design-system/src";
+
+   Tailwind v3 consumers keep using tailwind.preset.js. Both are maintained;
+   neither is deprecated.
+   ========================================================================== */
+
+/* The mode switch is `data-theme`, matching the v3 preset's
+   darkMode: ["selector", '[data-theme="dark"]']. Token-driven theming rarely
+   needs a `dark:` utility, but registering it keeps the two ports honest. */
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* ---------------------------------------------------------------------------
+   COLOR — `inline` so utilities compile to var() and follow [data-theme]
+   rather than baking in the light values at build time.
+   ------------------------------------------------------------------------- */
+@theme inline {
+  /* surfaces */
+  --color-canvas:     var(--surface-canvas);
+  --color-card:       var(--surface-card);
+  --color-sunken:     var(--surface-sunken);
+  --color-tint:       var(--surface-tint);
+  --color-brand-soft: var(--surface-brand-soft);
+
+  /* text */
+  --color-ink:        var(--text-primary);
+  --color-muted:      var(--text-secondary);
+  --color-faint:      var(--text-tertiary);
+  --color-brand-text: var(--text-brand);
+
+  /* actions. `brand` is the seal/ribbon orange and is NOT an action color —
+     see rule 2 in SKILL.md. Fills use `action`. */
+  --color-action:        var(--action-primary);
+  --color-action-hover:  var(--action-primary-hover);
+  --color-action-fg:     var(--text-on-action);
+  --color-brand:         var(--e911-brand);
+
+  /* borders */
+  --color-line:        var(--border-default);
+  --color-line-strong: var(--border-strong);
+  --color-line-row:    var(--border-row);
+
+  /* status — always paired with a dot and a word, never color alone */
+  --color-ok:        var(--status-ok);
+  --color-ok-soft:   var(--status-ok-soft);
+  --color-warn:      var(--status-warn);
+  --color-warn-soft: var(--status-warn-soft);
+  --color-bad:       var(--status-bad);
+  --color-bad-soft:  var(--status-bad-soft);
+
+  /* domain edges — one domain, one hue, everywhere */
+  --color-edge-orange: var(--e911-edge-orange);
+  --color-edge-teal:   var(--e911-edge-teal);
+  --color-edge-gold:   var(--e911-edge-gold);
+  --color-edge-green:  var(--e911-edge-green);
+  --color-edge-plum:   var(--e911-edge-plum);
+  --color-edge-blue:   var(--e911-edge-blue);
+}
+
+/* ---------------------------------------------------------------------------
+   STRUCTURE — mode-invariant, so plain @theme.
+   ------------------------------------------------------------------------- */
+@theme {
+  /* type families */
+  --font-display: var(--e911-font-display);
+  --font-body:    var(--e911-font-body);
+  --font-mono:    var(--e911-font-mono);
+
+  /* type scale. v4 spells the tuple members as `--text-x--line-height` etc.,
+     which is what the v3 preset expressed as an array second element. */
+  --text-body: var(--font-size-body);
+  --text-body--line-height: 1.5;
+  --text-body--letter-spacing: -0.004em;
+
+  --text-table: var(--font-size-table);
+  --text-table--line-height: 1.45;
+
+  --text-label: var(--font-size-label);
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.05em;
+
+  --text-h1: var(--font-size-h1);
+  --text-h1--line-height: 1.2;
+  --text-h1--letter-spacing: -0.015em;
+  --text-h1--font-weight: 700;
+
+  --text-h2: var(--font-size-h2);
+  --text-h2--line-height: 1.25;
+  --text-h2--letter-spacing: -0.012em;
+  --text-h2--font-weight: 700;
+
+  --text-h3: var(--font-size-h3);
+  --text-h3--line-height: 1.3;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h3--font-weight: 700;
+
+  --text-kpi: var(--font-size-kpi);
+  --text-kpi--line-height: 1.1;
+  --text-kpi--letter-spacing: -0.015em;
+  --text-kpi--font-weight: 700;
+
+  --text-mono: var(--font-size-mono);
+  --text-mono--line-height: 1.4;
+
+  /* radii — three tokens and a pill, nothing else. `md` is the card radius and
+     is also what bare `rounded` resolved to under the v3 preset's DEFAULT key.
+     Components use the explicit `rounded-md`. */
+  --radius-sm:   var(--e911-radius-sm);
+  --radius-md:   var(--e911-radius-md);
+  --radius-lg:   var(--e911-radius-lg);
+  --radius-pill: var(--e911-radius-pill);
+
+  /* named component metrics — v4's --spacing-* namespace covers h-/w-/p-/m-. */
+  --spacing-rail:   var(--rail-width);
+  --spacing-row:    var(--row-height);
+  --spacing-ctl:    var(--control-height);
+  --spacing-ctl-sm: var(--control-height-sm);
+
+  /* motion. One curve for the whole system. */
+  --ease-e911: var(--e911-ease);
+  --default-transition-duration: var(--e911-dur);
+  --default-transition-timing-function: var(--e911-ease);
+}
+
+/* ---------------------------------------------------------------------------
+   THE GAPS — v4 has no theme namespace for border-width, background-image, or
+   transition-duration, so these four families must be real utilities. Without
+   them DomainCard loses its domain edge, Chip loses its border, and Ribbon
+   loses its gradient — silently, since an unknown utility is simply dropped.
+   ------------------------------------------------------------------------- */
+
+/* border-width: the 4px domain edge and the 1.5px chip stroke */
+@utility border-edge   { border-width: var(--card-edge-width); }
+@utility border-t-edge { border-top-width: var(--card-edge-width); }
+@utility border-chip   { border-width: 1.5px; }
+
+/* background-image: the two system signatures.
+   NOTE: both tokens are `background` shorthands (the dot grid carries its own
+   position and size), so they set `background`, not `background-image`. The v3
+   preset mapped dotgrid through backgroundImage, where the `0 0 / 18px 18px`
+   tail is invalid — this port fixes that rather than reproducing it. */
+@utility bg-ribbon  { background-image: var(--ribbon-gradient); }
+@utility bg-dotgrid { background: var(--surface-dotgrid); }
+
+/* transition-duration */
+@utility duration-fast { transition-duration: var(--e911-dur-fast); }
+@utility duration-base { transition-duration: var(--e911-dur); }
+
+/* elevation. Declared as utilities rather than @theme because tokens.css
+   already owns the names `--shadow-card` / `--shadow-pop`, and v4's shadow
+   namespace uses those exact names — `--shadow-card: var(--shadow-card)`
+   inside @theme would be a circular reference. */
+@utility shadow-card { box-shadow: var(--shadow-card); }
+@utility shadow-pop  { box-shadow: var(--shadow-pop); }
+
+/* The one sanctioned uppercase treatment: 11px mono caps labels. */
+@utility label-caps {
+  font-family: var(--e911-font-body);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
