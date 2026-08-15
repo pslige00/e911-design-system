@@ -1,0 +1,39 @@
+# e911-design-system
+
+The design system for E911's internal apps. **Not an app itself** — every
+app lives in its own repo and depends on this one. See `SETUP.md` for how
+to consume it.
+
+**Direction:** Terrazzo × Solstice · **Type:** Grotesk Standard
+(Space Grotesk / Onest / JetBrains Mono) · **v1.0.0** · Locked 2026-08-14.
+
+| Path | What it is |
+|---|---|
+| `tokens/tokens.css` | **Canonical source of truth.** Tier 1 primitives + Tier 2 semantic tokens, light default + dark set. |
+| `tokens/tailwind.preset.js` | Tailwind preset mapping utilities → the CSS variables. |
+| `tokens/tokens.json` | Machine-readable export (Style Dictionary shape). |
+| `tokens/tokens.scss` | Primitives as SCSS vars — build-time math only. |
+| `tokens/spec.html` | Living spec, tokens inlined. Open directly in a browser — no build step. |
+| `tokens/SKILL.md` | Claude Code skill — copy into every consuming app repo. |
+| `src/` | React component library (`AppShell`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`). |
+| `SETUP.md` | **Start here** — how a separate app repo installs and wires this up. |
+
+## The five rules (short form)
+
+1. Semantic tokens only — no hex, no raw px radii, no font names in app code.
+2. `#E8690A` = seal + ribbon gradient only. Fills `--action-primary`, text `--text-brand`.
+3. Status = pill + dot + word. Never color alone.
+4. Digits are tabular, dates/IDs are mono.
+5. Domain edge colors: orange ops · teal roster · gold certs · green QA · plum training · blue facilities.
+
+## Working on this repo
+
+```bash
+pnpm install
+pnpm typecheck        # checks src/ against tsconfig.json
+```
+
+Open `tokens/spec.html` directly in a browser to review token changes —
+it has the whole system inlined, no dev server needed.
+
+Full change → consume → update workflow is in `SETUP.md`.

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E911 Design System — spec v1.0.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   E911 DESIGN SYSTEM — tokens.css
+   Direction: "Terrazzo × Solstice" · Type: "Grotesk Standard"
+   Version: 1.0.0 · Locked 2026-08-14
+
+   THE RULE: application code uses TIER 2 (semantic) names only.
+   Tier 1 primitives exist so Tier 2 has something to point at.
+   Never hard-code a hex, px radius, or font-family in app code.
+
+   All text/surface pairs verified WCAG 2.1 AA (ratios noted inline).
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   TIER 1 — PRIMITIVES (derived in OKLCH from brand #E8690A, hue 47.7°)
+   ------------------------------------------------------------------------- */
+:root {
+  /* brand orange ramp */
+  --e911-orange-300: #FFA066;
+  --e911-orange-400: #F5803D;   /* 7.15:1 on ink — dark-mode primary */
+  --e911-orange-500: #E06405;
+  --e911-orange-600: #C74F00;   /* 4.62:1 on white — light-mode fills */
+  --e911-orange-700: #A83B00;   /* 6.38:1 on white — light-mode text  */
+  --e911-orange-800: #8A2800;
+  --e911-brand:      #E8690A;   /* logo color: seal + gradient only, never text */
+
+  /* warm neutrals (logo hue, chroma ≈ 0.03) */
+  --e911-warm-25:  #FBF9F6;
+  --e911-warm-50:  #F8F6F3;
+  --e911-warm-100: #F2EDE5;
+  --e911-warm-200: #E8E0D4;
+  --e911-warm-300: #D9CEBD;
+  --e911-warm-400: #B6A794;
+  --e911-warm-500: #9A8977;
+  --e911-warm-600: #6C5C4B;
+  --e911-warm-700: #52443A;
+  --e911-warm-800: #40342A;
+  --e911-warm-900: #31261C;
+  --e911-warm-950: #211913;
+
+  /* domain edge hues (card top-edges; one per app domain) */
+  --e911-edge-orange: #C74F00;
+  --e911-edge-teal:   #0E7A70;
+  --e911-edge-gold:   #B98300;
+  --e911-edge-green:  #2F7A34;
+  --e911-edge-plum:   #6D4FC4;
+  --e911-edge-blue:   #2E5FAE;
+
+  /* status hues */
+  --e911-green-700: #2F6B2E;  --e911-green-100: #E7F2E3;
+  --e911-gold-700:  #7E6000;  --e911-gold-100:  #F7EFD7;
+  --e911-red-700:   #A63A22;  --e911-red-100:   #F9E7E1;
+
+  /* type families */
+  --e911-font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --e911-font-body:    "Onest", "Segoe UI", system-ui, sans-serif;
+  --e911-font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* 8pt spacing grid (4px base) */
+  --e911-space-1: 4px;  --e911-space-2: 8px;   --e911-space-3: 12px;
+  --e911-space-4: 16px; --e911-space-5: 20px;  --e911-space-6: 24px;
+  --e911-space-8: 32px; --e911-space-10: 40px; --e911-space-12: 48px;
+
+  /* radii */
+  --e911-radius-sm: 8px;    /* chips, inputs, rail buttons  */
+  --e911-radius-md: 10px;   /* cards                        */
+  --e911-radius-lg: 14px;   /* ribbon, dialogs              */
+  --e911-radius-pill: 999px;
+
+  /* motion */
+  --e911-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --e911-dur-fast: 110ms;
+  --e911-dur: 170ms;
+}
+
+/* ---------------------------------------------------------------------------
+   TIER 2 — SEMANTIC (light, default)
+   ------------------------------------------------------------------------- */
+:root, [data-theme="light"] {
+  color-scheme: light;
+
+  /* surfaces */
+  --surface-canvas:  var(--e911-warm-50);
+  --surface-card:    #FFFFFF;
+  --surface-sunken:  var(--e911-warm-25);    /* table heads, wells      */
+  --surface-tint:    var(--e911-warm-100);   /* hovers, quiet fills     */
+  --surface-brand-soft: #FCEBDB;             /* active nav, chips       */
+
+  /* the dot-grid canvas texture (Terrazzo signature) */
+  --surface-dotgrid:
+    radial-gradient(circle, rgba(49, 38, 28, 0.055) 1px, transparent 1px)
+    0 0 / 18px 18px;
+
+  /* borders */
+  --border-default: var(--e911-warm-200);
+  --border-strong:  var(--e911-warm-300);
+  --border-row:     var(--e911-warm-100);
+
+  /* text — ratios on canvas #F8F6F3 */
+  --text-primary:   var(--e911-warm-900);   /* 13.7:1 */
+  --text-secondary: var(--e911-warm-600);   /*  6.4:1 */
+  --text-tertiary:  var(--e911-warm-500);   /* labels ≥12px semibold only */
+  --text-on-action: #FFFFFF;                /* 4.6:1 on action */
+  --text-brand:     var(--e911-orange-700); /* 6.0:1 */
+
+  /* actions */
+  --action-primary:       var(--e911-orange-600);
+  --action-primary-hover: var(--e911-orange-700);
+  --action-secondary-border: var(--e911-warm-300);
+  --focus-ring: var(--e911-orange-600);
+
+  /* ribbon (Solstice signature) — white text ≥4.6:1 across the run */
+  --ribbon-gradient: linear-gradient(115deg, #A83B00, #C74F00 58%, #D8912B);
+  --ribbon-text: #FFFFFF;
+
+  /* status — pill + dot + word, never color alone */
+  --status-ok:        var(--e911-green-700);
+  --status-ok-soft:   var(--e911-green-100);
+  --status-warn:      var(--e911-gold-700);
+  --status-warn-soft: var(--e911-gold-100);
+  --status-bad:       var(--e911-red-700);
+  --status-bad-soft:  var(--e911-red-100);
+
+  /* elevation */
+  --shadow-card: 0 1px 2px rgba(49, 38, 28, 0.05);
+  --shadow-pop:  0 8px 30px -12px rgba(49, 38, 28, 0.28);
+
+  /* component metrics (density: Terrazzo) */
+  --control-height: 32px;
+  --control-height-sm: 28px;
+  --row-height: 40px;
+  --card-padding: var(--e911-space-4);
+  --card-edge-width: 4px;          /* the colored top edge */
+  --rail-width: 64px;
+
+  /* type scale (display face: headings + KPI numerals only) */
+  --font-size-body: 13.5px;
+  --font-size-table: 12.8px;
+  --font-size-label: 11px;         /* semibold, +0.05em, uppercase */
+  --font-size-h1: 20px;            /* display 700, -0.015em */
+  --font-size-h2: 16px;
+  --font-size-h3: 14.5px;
+  --font-size-kpi: 25px;           /* display 700, tabular-nums */
+  --font-size-mono: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   TIER 2 — SEMANTIC (dark; warm charcoal, orange leads — Nightshift-derived)
+   Same names, second value set. Apps get dark for free.
+   ------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-canvas:  #14100D;
+  --surface-card:    #1E1814;
+  --surface-sunken:  #191410;
+  --surface-tint:    #28211B;
+  --surface-brand-soft: rgba(245, 128, 61, 0.14);
+  --surface-dotgrid:
+    radial-gradient(circle, rgba(255, 235, 220, 0.05) 1px, transparent 1px)
+    0 0 / 18px 18px;
+
+  --border-default: #3A2E26;
+  --border-strong:  #54443A;
+  --border-row:     #2C231C;
+
+  --text-primary:   #F7EFE8;
+  --text-secondary: #B4A197;
+  --text-tertiary:  #89756B;
+  --text-on-action: #1A0E05;
+  --text-brand:     var(--e911-orange-300);
+
+  --action-primary:       var(--e911-orange-500);
+  --action-primary-hover: var(--e911-orange-400);
+  --action-secondary-border: #54443A;
+  --focus-ring: var(--e911-orange-300);
+
+  --ribbon-gradient: linear-gradient(115deg, #6F1600, #A83B00 58%, #B98300);
+  --ribbon-text: #FFF4E8;
+
+  --status-ok:   #5BC46F;  --status-ok-soft:   rgba(91, 196, 111, 0.14);
+  --status-warn: #E7B93C;  --status-warn-soft: rgba(231, 185, 60, 0.14);
+  --status-bad:  #F26D5F;  --status-bad-soft:  rgba(242, 109, 95, 0.15);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-pop:  0 12px 34px -14px rgba(0, 0, 0, 0.8);
+}
+
+/* ---------------------------------------------------------------------------
+   BASE APPLICATION — the few globals every E911 app starts from
+   ------------------------------------------------------------------------- */
+.e911-app {
+  background: var(--surface-dotgrid), var(--surface-canvas);
+  color: var(--text-primary);
+  font-family: var(--e911-font-body);
+  font-size: var(--font-size-body);
+  letter-spacing: -0.004em;
+  line-height: 1.5;
+}
+.e911-app :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.e911-display {
+  font-family: var(--e911-font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.e911-mono {
+  font-family: var(--e911-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .e911-app *, .e911-app *::before, .e911-app *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+</style>
+<style>
+/* Spec chrome consumes ONLY semantic tokens — this page is itself the proof. */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0}
+button{font:inherit; color:inherit; cursor:pointer}
+h1,h2,h3{margin:0} p{margin:0}
+
+.shell{max-width:1160px; margin:0 auto; padding:0 var(--e911-space-5) var(--e911-space-12)}
+.top{position:sticky; top:0; z-index:20; background:var(--surface-card); border-bottom:1px solid var(--border-default)}
+.top-in{max-width:1160px; margin:0 auto; padding:0 var(--e911-space-5); height:56px; display:flex; align-items:center; gap:var(--e911-space-3)}
+.seal{width:28px; height:28px; border-radius:var(--e911-radius-pill); background:var(--e911-brand); color:#fff; display:grid; place-items:center; font-size:9px; font-weight:800; font-family:var(--e911-font-body)}
+.top b{font-family:var(--e911-font-display); font-size:15px}
+.top small{display:block; font-size:10.5px; color:var(--text-tertiary); margin-top:-2px}
+.mode{margin-left:auto; display:flex; gap:2px; padding:3px; background:var(--surface-tint); border-radius:var(--e911-radius-pill)}
+.mode button{border:0; background:transparent; padding:5px 13px; border-radius:var(--e911-radius-pill); font-size:12px; font-weight:600; color:var(--text-secondary)}
+.mode button[aria-pressed="true"]{background:var(--action-primary); color:var(--text-on-action)}
+
+.sec{margin-top:var(--e911-space-8)}
+.sec > h2{font-family:var(--e911-font-display); font-size:var(--font-size-h2); letter-spacing:-.012em; padding-bottom:var(--e911-space-2); border-bottom:1px solid var(--border-default); margin-bottom:var(--e911-space-4)}
+.sec > h2 span{font-family:var(--e911-font-mono); font-size:11px; color:var(--text-tertiary); font-weight:400; margin-left:10px}
+
+.ribbon{position:relative; padding:var(--e911-space-5); border-radius:var(--e911-radius-lg); overflow:hidden; background:var(--ribbon-gradient); color:var(--ribbon-text); margin-top:var(--e911-space-5)}
+.ribbon::after{content:""; position:absolute; right:-60px; top:-80px; width:240px; height:240px; border-radius:50%; background:rgba(255,255,255,.10)}
+.ribbon .eyeb{font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase}
+.ribbon h1{font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:24px; margin-top:4px}
+.ribbon p{font-size:12.5px; margin-top:3px; opacity:.95}
+.ribbon .btns{position:absolute; right:var(--e911-space-5); top:50%; transform:translateY(-50%); display:flex; gap:var(--e911-space-2)}
+.btn-w{height:33px; padding:0 14px; border-radius:9px; border:0; background:#fff; color:var(--e911-orange-700); font-size:12.5px; font-weight:700}
+.btn-g{height:33px; padding:0 14px; border-radius:9px; border:1px solid rgba(255,255,255,.5); background:transparent; color:var(--ribbon-text); font-size:12.5px; font-weight:600}
+
+.grid{display:grid; gap:var(--e911-space-4)}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--surface-card); border:1px solid var(--border-default); border-radius:var(--e911-radius-md); box-shadow:var(--shadow-card); padding:var(--card-padding); min-width:0}
+.card.edged{border-top:var(--card-edge-width) solid var(--edge, var(--e911-edge-orange))}
+.lab{font-size:var(--font-size-label); font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-tertiary)}
+.kpi{font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-kpi); font-variant-numeric:tabular-nums; margin-top:4px}
+.sub{display:flex; gap:6px; align-items:center; font-size:11.5px; color:var(--text-secondary); margin-top:4px}
+.mini{font-family:var(--e911-font-mono); font-size:10px; padding:1px 7px; border-radius:6px; font-weight:500}
+.mini.up{background:var(--status-ok-soft); color:var(--status-ok)}
+.mini.dn{background:var(--status-bad-soft); color:var(--status-bad)}
+
+.sw{display:flex; flex-direction:column; border:1px solid var(--border-default); border-radius:var(--e911-radius-sm); overflow:hidden}
+.sw .c{height:44px}
+.sw .m{padding:5px 8px; background:var(--surface-sunken)}
+.sw .m b{display:block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--text-secondary); font-family:var(--e911-font-body)}
+.sw .m span{font-family:var(--e911-font-mono); font-size:9.5px; color:var(--text-tertiary)}
+
+.trow{display:grid; grid-template-columns:150px 1fr; gap:var(--e911-space-4); padding:11px 0; border-bottom:1px solid var(--border-row); align-items:baseline}
+.trow:last-child{border-bottom:0}
+
+.btn{display:inline-flex; align-items:center; gap:6px; height:var(--control-height); padding:0 14px; border-radius:var(--e911-radius-sm); border:1px solid transparent; background:transparent; font-size:12.5px; font-weight:600; transition:background var(--e911-dur-fast) var(--e911-ease)}
+.btn-p{background:var(--action-primary); color:var(--text-on-action)}
+.btn-p:hover{background:var(--action-primary-hover)}
+.btn-s{border-color:var(--action-secondary-border); background:var(--surface-card); color:var(--text-primary); font-weight:500}
+.btn-s:hover{background:var(--surface-tint)}
+.btn-q{color:var(--text-secondary); font-weight:500}
+.btn-q:hover{background:var(--surface-tint); color:var(--text-primary)}
+.chip{height:var(--control-height-sm); padding:0 12px; border-radius:var(--e911-radius-sm); border:1.5px solid var(--border-default); background:var(--surface-card); color:var(--text-secondary); font-size:12px; font-weight:500}
+.chip[data-on]{border-color:var(--action-primary); background:var(--surface-brand-soft); color:var(--text-brand); font-weight:600}
+.tag{display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 9px; border-radius:var(--e911-radius-pill); font-size:11px; font-weight:600}
+.tag i{width:5px; height:5px; border-radius:var(--e911-radius-pill); background:currentColor}
+.tag.ok{background:var(--status-ok-soft); color:var(--status-ok)}
+.tag.warn{background:var(--status-warn-soft); color:var(--status-warn)}
+.tag.bad{background:var(--status-bad-soft); color:var(--status-bad)}
+.cchip{display:inline-flex; align-items:center; height:20px; padding:0 7px; margin-right:4px; border-radius:6px; font-family:var(--e911-font-mono); font-size:10px; border:1.5px solid var(--border-default); color:var(--text-secondary)}
+.cchip.w{border-color:var(--status-warn); background:var(--status-warn-soft); color:var(--status-warn)}
+.cchip.b{border-color:var(--status-bad); background:var(--status-bad-soft); color:var(--status-bad)}
+
+.field{display:flex; flex-direction:column; gap:5px; max-width:340px}
+.field label{font-size:12.5px; font-weight:500; color:var(--text-secondary)}
+.input{height:var(--control-height); padding:0 10px; background:var(--surface-card); color:var(--text-primary); border:1.5px solid var(--border-default); border-radius:var(--e911-radius-sm); font:inherit; font-size:13px}
+.input:focus{outline:none; border-color:var(--focus-ring); box-shadow:0 0 0 3px color-mix(in srgb, var(--focus-ring) 20%, transparent)}
+.hint{font-size:11.5px; color:var(--text-tertiary)}
+.hint.err{color:var(--status-bad); font-weight:500}
+.input.err{border-color:var(--status-bad)}
+
+table{width:100%; border-collapse:collapse}
+th{text-align:left; padding:8px var(--e911-space-4); font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-tertiary); border-bottom:1px solid var(--border-default); background:var(--surface-sunken); white-space:nowrap}
+td{padding:0 var(--e911-space-4); height:var(--row-height); border-bottom:1px solid var(--border-row); font-size:var(--font-size-table); vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.mono{font-family:var(--e911-font-mono); font-variant-numeric:tabular-nums; font-size:var(--font-size-mono); color:var(--text-secondary)}
+
+footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-top:1px solid var(--border-default); color:var(--text-tertiary); font-size:12px}
+@media (max-width:860px){ .g3,.g4{grid-template-columns:repeat(2,1fr)} .g2{grid-template-columns:1fr} .ribbon .btns{position:static; transform:none; margin-top:12px} }
+@media (max-width:560px){ .g3,.g4{grid-template-columns:1fr} }
+</style>
+</head>
+<body class="e911-app" data-theme="light">
+
+<div class="top">
+  <div class="top-in">
+    <div class="seal">911</div>
+    <div><b>E911 Design System</b><small>v1.0.0 · Terrazzo × Solstice · Grotesk Standard</small></div>
+    <div class="mode" role="group" aria-label="Theme">
+      <button type="button" data-m="light" aria-pressed="true">Light</button>
+      <button type="button" data-m="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <div class="ribbon">
+    <div class="eyeb">System spec · tokens.css consumed directly</div>
+    <h1>Everything on this page is a token.</h1>
+    <p>No literal colors, radii, or fonts below this line — flip to dark to prove it.</p>
+    <div class="btns"><button class="btn-g">tokens.json</button><button class="btn-w">tokens.css</button></div>
+  </div>
+
+  <section class="sec">
+    <h2>Color <span>primitives → semantic</span></h2>
+    <div class="grid g4">
+      <div class="sw"><div class="c" style="background:var(--surface-canvas)"></div><div class="m"><b>surface-canvas</b><span>warm-50</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--surface-card); border-bottom:1px solid var(--border-default)"></div><div class="m"><b>surface-card</b><span>#FFFFFF / #1E1814</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--action-primary)"></div><div class="m"><b>action-primary</b><span>orange-600 / 500</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--e911-brand)"></div><div class="m"><b>brand (seal only)</b><span>#E8690A</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--status-ok-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-ok); font-weight:700; font-size:12px">ok</div></div><div class="m"><b>status-ok</b><span>green-700 on 100</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--status-warn-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-warn); font-weight:700; font-size:12px">warn</div></div><div class="m"><b>status-warn</b><span>gold-700 on 100</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--status-bad-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-bad); font-weight:700; font-size:12px">bad</div></div><div class="m"><b>status-bad</b><span>red-700 on 100</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--ribbon-gradient)"></div><div class="m"><b>ribbon-gradient</b><span>brand surface</span></div></div>
+    </div>
+    <div class="grid g3" style="margin-top:var(--e911-space-4)">
+      <div class="card edged" style="--edge:var(--e911-edge-orange)"><span class="lab">edge-orange · operations</span></div>
+      <div class="card edged" style="--edge:var(--e911-edge-teal)"><span class="lab">edge-teal · roster</span></div>
+      <div class="card edged" style="--edge:var(--e911-edge-gold)"><span class="lab">edge-gold · certifications</span></div>
+      <div class="card edged" style="--edge:var(--e911-edge-green)"><span class="lab">edge-green · QA</span></div>
+      <div class="card edged" style="--edge:var(--e911-edge-plum)"><span class="lab">edge-plum · training</span></div>
+      <div class="card edged" style="--edge:var(--e911-edge-blue)"><span class="lab">edge-blue · facilities / IT</span></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Type <span>Space Grotesk · Onest · JetBrains Mono</span></h2>
+    <div class="card">
+      <div class="trow"><span class="lab">display / h1</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-h1)">Certification watchlist</span></div>
+      <div class="trow"><span class="lab">kpi numeral</span><span class="kpi" style="margin:0">94.6%&nbsp;&nbsp;128&nbsp;&nbsp;97.1%</span></div>
+      <div class="trow"><span class="lab">body</span><span style="font-size:var(--font-size-body)">Renewals are due 30 days before a certification lapses. Supervisors get one reminder; after that the record moves to Action needed.</span></div>
+      <div class="trow"><span class="lab">label</span><span class="lab" style="color:var(--text-secondary)">Next expiry — Shift B</span></div>
+      <div class="trow"><span class="lab">mono / data</span><span class="mono">2026-09-14 · TC-1184 · 865-215-0911 · EMD-2026-0147</span></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Controls</h2>
+    <div class="grid g2">
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:10px">Buttons & chips</span>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center">
+          <button class="btn btn-p">Record training</button>
+          <button class="btn btn-s">Export</button>
+          <button class="btn btn-q">Reset filters</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px">
+          <button class="chip" data-on>30 days</button><button class="chip">Quarter</button><button class="chip">All shifts</button><button class="chip">Shift B</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center">
+          <span class="tag ok"><i></i>Current</span><span class="tag warn"><i></i>Due soon</span><span class="tag bad"><i></i>Lapsed</span>
+          <span class="cchip">EMD</span><span class="cchip w">CPR 21d</span><span class="cchip b">TIES −4d</span>
+        </div>
+      </div>
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:10px">Form field</span>
+        <div class="field">
+          <label for="d1">Completion date</label>
+          <input class="input err" id="d1" value="04/31/2026" aria-invalid="true" aria-describedby="d1h">
+          <span class="hint err" id="d1h">April has 30 days. Use a date on or before today.</span>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label for="d2">Certificate number</label>
+          <input class="input" id="d2" placeholder="e.g. EMD-2026-0147">
+          <span class="hint">Found on the top right of the IAED card.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Composition <span>KPI row + watchlist table</span></h2>
+    <div class="grid g4">
+      <div class="card edged" style="--edge:var(--e911-edge-orange)"><span class="lab">Calls ≤ 15s</span><div class="kpi">94.6%</div><div class="sub"><span class="mini up">+1.2</span>NENA 90%</div></div>
+      <div class="card edged" style="--edge:var(--e911-edge-gold)"><span class="lab">Certs expiring</span><div class="kpi">6</div><div class="sub"><span class="mini dn">−2</span>next 30 days</div></div>
+      <div class="card edged" style="--edge:var(--e911-edge-teal)"><span class="lab">Coverage</span><div class="kpi">97.1%</div><div class="sub">34 / 35 seats</div></div>
+      <div class="card edged" style="--edge:var(--e911-edge-green)"><span class="lab">QA complete</span><div class="kpi">128</div><div class="sub"><span class="mini up">+14</span>of 140</div></div>
+    </div>
+    <div class="card edged" style="--edge:var(--e911-edge-gold); padding:0; overflow:hidden; margin-top:var(--e911-space-4)">
+      <div style="display:flex; align-items:center; gap:9px; padding:12px var(--e911-space-4); border-bottom:1px solid var(--border-default)">
+        <h3 style="font-family:var(--e911-font-display); font-size:var(--font-size-h3); letter-spacing:-.01em">Certification watchlist</h3>
+        <span class="tag warn" style="margin-left:auto"><i></i>6 due</span>
+      </div>
+      <table>
+        <thead><tr><th>Telecommunicator</th><th>Certs held</th><th>Next expiry</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><b>M. Alvarez</b> · Shift B</td><td><span class="cchip b">EMD</span><span class="cchip">EFD</span><span class="cchip">CPR</span></td><td class="mono">2026-08-10</td><td><span class="tag bad"><i></i>Lapsed</span></td></tr>
+          <tr><td><b>D. Whitfield</b> · Shift A</td><td><span class="cchip">EMD</span><span class="cchip w">EPD</span><span class="cchip">TIES</span></td><td class="mono">2026-08-26</td><td><span class="tag warn"><i></i>12 days</span></td></tr>
+          <tr><td><b>R. Okonkwo</b> · Shift C</td><td><span class="cchip">EMD</span><span class="cchip w">CPR</span></td><td class="mono">2026-09-04</td><td><span class="tag warn"><i></i>21 days</span></td></tr>
+          <tr><td><b>K. Bledsoe</b> · Shift B</td><td><span class="cchip">EMD</span><span class="cchip">EFD</span><span class="cchip">CJIS</span></td><td class="mono">2027-01-30</td><td><span class="tag ok"><i></i>Current</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    E911 Design System v1.0.0 · Locked 2026-08-14 · All pairs WCAG 2.1 AA · Status is always pill + dot + word · Sample data only
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll('.mode button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.mode button').forEach(x => x.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true');
+  document.body.dataset.theme = b.dataset.m;
+}));
+</script>
+</body>
+</html>

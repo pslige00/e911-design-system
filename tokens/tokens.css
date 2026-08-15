@@ -1,0 +1,218 @@
+/* ============================================================================
+   E911 DESIGN SYSTEM — tokens.css
+   Direction: "Terrazzo × Solstice" · Type: "Grotesk Standard"
+   Version: 1.0.0 · Locked 2026-08-14
+
+   THE RULE: application code uses TIER 2 (semantic) names only.
+   Tier 1 primitives exist so Tier 2 has something to point at.
+   Never hard-code a hex, px radius, or font-family in app code.
+
+   All text/surface pairs verified WCAG 2.1 AA (ratios noted inline).
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   TIER 1 — PRIMITIVES (derived in OKLCH from brand #E8690A, hue 47.7°)
+   ------------------------------------------------------------------------- */
+:root {
+  /* brand orange ramp */
+  --e911-orange-300: #FFA066;
+  --e911-orange-400: #F5803D;   /* 7.15:1 on ink — dark-mode primary */
+  --e911-orange-500: #E06405;
+  --e911-orange-600: #C74F00;   /* 4.62:1 on white — light-mode fills */
+  --e911-orange-700: #A83B00;   /* 6.38:1 on white — light-mode text  */
+  --e911-orange-800: #8A2800;
+  --e911-brand:      #E8690A;   /* logo color: seal + gradient only, never text */
+
+  /* warm neutrals (logo hue, chroma ≈ 0.03) */
+  --e911-warm-25:  #FBF9F6;
+  --e911-warm-50:  #F8F6F3;
+  --e911-warm-100: #F2EDE5;
+  --e911-warm-200: #E8E0D4;
+  --e911-warm-300: #D9CEBD;
+  --e911-warm-400: #B6A794;
+  --e911-warm-500: #9A8977;
+  --e911-warm-600: #6C5C4B;
+  --e911-warm-700: #52443A;
+  --e911-warm-800: #40342A;
+  --e911-warm-900: #31261C;
+  --e911-warm-950: #211913;
+
+  /* domain edge hues (card top-edges; one per app domain) */
+  --e911-edge-orange: #C74F00;
+  --e911-edge-teal:   #0E7A70;
+  --e911-edge-gold:   #B98300;
+  --e911-edge-green:  #2F7A34;
+  --e911-edge-plum:   #6D4FC4;
+  --e911-edge-blue:   #2E5FAE;
+
+  /* status hues */
+  --e911-green-700: #2F6B2E;  --e911-green-100: #E7F2E3;
+  --e911-gold-700:  #7E6000;  --e911-gold-100:  #F7EFD7;
+  --e911-red-700:   #A63A22;  --e911-red-100:   #F9E7E1;
+
+  /* type families */
+  --e911-font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --e911-font-body:    "Onest", "Segoe UI", system-ui, sans-serif;
+  --e911-font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* 8pt spacing grid (4px base) */
+  --e911-space-1: 4px;  --e911-space-2: 8px;   --e911-space-3: 12px;
+  --e911-space-4: 16px; --e911-space-5: 20px;  --e911-space-6: 24px;
+  --e911-space-8: 32px; --e911-space-10: 40px; --e911-space-12: 48px;
+
+  /* radii */
+  --e911-radius-sm: 8px;    /* chips, inputs, rail buttons  */
+  --e911-radius-md: 10px;   /* cards                        */
+  --e911-radius-lg: 14px;   /* ribbon, dialogs              */
+  --e911-radius-pill: 999px;
+
+  /* motion */
+  --e911-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --e911-dur-fast: 110ms;
+  --e911-dur: 170ms;
+}
+
+/* ---------------------------------------------------------------------------
+   TIER 2 — SEMANTIC (light, default)
+   ------------------------------------------------------------------------- */
+:root, [data-theme="light"] {
+  color-scheme: light;
+
+  /* surfaces */
+  --surface-canvas:  var(--e911-warm-50);
+  --surface-card:    #FFFFFF;
+  --surface-sunken:  var(--e911-warm-25);    /* table heads, wells      */
+  --surface-tint:    var(--e911-warm-100);   /* hovers, quiet fills     */
+  --surface-brand-soft: #FCEBDB;             /* active nav, chips       */
+
+  /* the dot-grid canvas texture (Terrazzo signature) */
+  --surface-dotgrid:
+    radial-gradient(circle, rgba(49, 38, 28, 0.055) 1px, transparent 1px)
+    0 0 / 18px 18px;
+
+  /* borders */
+  --border-default: var(--e911-warm-200);
+  --border-strong:  var(--e911-warm-300);
+  --border-row:     var(--e911-warm-100);
+
+  /* text — ratios on canvas #F8F6F3 */
+  --text-primary:   var(--e911-warm-900);   /* 13.7:1 */
+  --text-secondary: var(--e911-warm-600);   /*  6.4:1 */
+  --text-tertiary:  var(--e911-warm-500);   /* labels ≥12px semibold only */
+  --text-on-action: #FFFFFF;                /* 4.6:1 on action */
+  --text-brand:     var(--e911-orange-700); /* 6.0:1 */
+
+  /* actions */
+  --action-primary:       var(--e911-orange-600);
+  --action-primary-hover: var(--e911-orange-700);
+  --action-secondary-border: var(--e911-warm-300);
+  --focus-ring: var(--e911-orange-600);
+
+  /* ribbon (Solstice signature) — white text ≥4.6:1 across the run */
+  --ribbon-gradient: linear-gradient(115deg, #A83B00, #C74F00 58%, #D8912B);
+  --ribbon-text: #FFFFFF;
+
+  /* status — pill + dot + word, never color alone */
+  --status-ok:        var(--e911-green-700);
+  --status-ok-soft:   var(--e911-green-100);
+  --status-warn:      var(--e911-gold-700);
+  --status-warn-soft: var(--e911-gold-100);
+  --status-bad:       var(--e911-red-700);
+  --status-bad-soft:  var(--e911-red-100);
+
+  /* elevation */
+  --shadow-card: 0 1px 2px rgba(49, 38, 28, 0.05);
+  --shadow-pop:  0 8px 30px -12px rgba(49, 38, 28, 0.28);
+
+  /* component metrics (density: Terrazzo) */
+  --control-height: 32px;
+  --control-height-sm: 28px;
+  --row-height: 40px;
+  --card-padding: var(--e911-space-4);
+  --card-edge-width: 4px;          /* the colored top edge */
+  --rail-width: 64px;
+
+  /* type scale (display face: headings + KPI numerals only) */
+  --font-size-body: 13.5px;
+  --font-size-table: 12.8px;
+  --font-size-label: 11px;         /* semibold, +0.05em, uppercase */
+  --font-size-h1: 20px;            /* display 700, -0.015em */
+  --font-size-h2: 16px;
+  --font-size-h3: 14.5px;
+  --font-size-kpi: 25px;           /* display 700, tabular-nums */
+  --font-size-mono: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   TIER 2 — SEMANTIC (dark; warm charcoal, orange leads — Nightshift-derived)
+   Same names, second value set. Apps get dark for free.
+   ------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-canvas:  #14100D;
+  --surface-card:    #1E1814;
+  --surface-sunken:  #191410;
+  --surface-tint:    #28211B;
+  --surface-brand-soft: rgba(245, 128, 61, 0.14);
+  --surface-dotgrid:
+    radial-gradient(circle, rgba(255, 235, 220, 0.05) 1px, transparent 1px)
+    0 0 / 18px 18px;
+
+  --border-default: #3A2E26;
+  --border-strong:  #54443A;
+  --border-row:     #2C231C;
+
+  --text-primary:   #F7EFE8;
+  --text-secondary: #B4A197;
+  --text-tertiary:  #89756B;
+  --text-on-action: #1A0E05;
+  --text-brand:     var(--e911-orange-300);
+
+  --action-primary:       var(--e911-orange-500);
+  --action-primary-hover: var(--e911-orange-400);
+  --action-secondary-border: #54443A;
+  --focus-ring: var(--e911-orange-300);
+
+  --ribbon-gradient: linear-gradient(115deg, #6F1600, #A83B00 58%, #B98300);
+  --ribbon-text: #FFF4E8;
+
+  --status-ok:   #5BC46F;  --status-ok-soft:   rgba(91, 196, 111, 0.14);
+  --status-warn: #E7B93C;  --status-warn-soft: rgba(231, 185, 60, 0.14);
+  --status-bad:  #F26D5F;  --status-bad-soft:  rgba(242, 109, 95, 0.15);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-pop:  0 12px 34px -14px rgba(0, 0, 0, 0.8);
+}
+
+/* ---------------------------------------------------------------------------
+   BASE APPLICATION — the few globals every E911 app starts from
+   ------------------------------------------------------------------------- */
+.e911-app {
+  background: var(--surface-dotgrid), var(--surface-canvas);
+  color: var(--text-primary);
+  font-family: var(--e911-font-body);
+  font-size: var(--font-size-body);
+  letter-spacing: -0.004em;
+  line-height: 1.5;
+}
+.e911-app :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.e911-display {
+  font-family: var(--e911-font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.e911-mono {
+  font-family: var(--e911-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .e911-app *, .e911-app *::before, .e911-app *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
