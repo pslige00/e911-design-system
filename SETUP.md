@@ -15,6 +15,30 @@ Three options, ordered by setup cost. Start with option A; graduate to C
 only once several apps depend on this and version drift becomes a real
 problem — don't build the publishing pipeline before you need it.
 
+### A0. Local link with `file:` (what to use while both repos are on one machine)
+
+The fastest loop during active development, and what `e911-timesweep` uses.
+`npm` and `pnpm` both turn a `file:` dependency on a directory into a symlink,
+so an edit here shows up in the app on the next reload with no reinstall step.
+
+```jsonc
+// app repo's package.json — sibling directories
+"dependencies": {
+  "@e911/design-system": "file:../e911-design-system"
+}
+```
+
+**The catch, and it will bite you on deploy day:** `../e911-design-system`
+resolves *outside* the Docker build context, so the usual
+`COPY package.json package-lock.json ./` + `npm ci` deps stage fails with
+`ENOENT`. Two fixes, pick one and write it down:
+
+1. Set the build context to the **parent** directory and copy both repos in —
+   `context: ..`, `dockerfile: <app>/Dockerfile`. Keeps one source of truth.
+2. Swap to the git-tag dependency (option B) for deploy builds only.
+
+Graduate to B as soon as a second machine or a CI runner needs to build.
+
 ### A. Copy-in (zero tooling — good for the next app or two)
 
 No package manager wiring, no auth, no versioning discipline required yet.

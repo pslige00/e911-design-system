@@ -10,7 +10,8 @@ to consume it.
 | Path | What it is |
 |---|---|
 | `tokens/tokens.css` | **Canonical source of truth.** Tier 1 primitives + Tier 2 semantic tokens, light default + dark set. |
-| `tokens/tailwind.preset.js` | Tailwind preset mapping utilities → the CSS variables. |
+| `tokens/tailwind.preset.js` | Tailwind **v3** preset mapping utilities → the CSS variables. |
+| `tokens/tailwind-v4.css` | Tailwind **v4** port producing the same utility names. Both are maintained; neither is deprecated. Add any new utility to **both**. |
 | `tokens/tokens.json` | Machine-readable export (Style Dictionary shape). |
 | `tokens/tokens.scss` | Primitives as SCSS vars — build-time math only. |
 | `tokens/spec.html` | Living spec, tokens inlined. Open directly in a browser — no build step. |
@@ -29,8 +30,8 @@ to consume it.
 ## Working on this repo
 
 ```bash
-pnpm install
-pnpm typecheck        # checks src/ against tsconfig.json
+npm install
+npm run typecheck     # checks src/ against tsconfig.json
 ```
 
 Open `tokens/spec.html` directly in a browser to review token changes —
