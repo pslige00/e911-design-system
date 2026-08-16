@@ -257,14 +257,15 @@ const WAIVED = {
   // The secondary button has a visible label and a 3:1 hover/focus state, so
   // its resting stroke is not the sole identifier.
   "Secondary button border": "labelled control; focus ring and hover carry the state",
-  // The input border is the real one. An input is `bg-card` inside a card that
-  // is ALSO `bg-card`, so at 1.31:1 the stroke is genuinely the only thing
-  // marking the field. Raising --border-default globally would repaint every
-  // divider in every E911 app — that is a design decision, not a token patch,
-  // and it wants its own review rather than a ride inside an a11y release.
-  // Recommended fix: a dedicated --border-control at >=3:1, leaving
-  // --border-default alone. Reported, not shipped.
-  "Input border": "REAL 1.4.11 GAP — needs a --border-control token; see report",
+  //
+  // "Input border" was the fourth entry here from 1.1.2 to 1.4.0, and it was
+  // the honest one: an input is `bg-card` inside a card that is ALSO `bg-card`,
+  // so at 1.31:1 the stroke was genuinely the only thing marking the field.
+  // 1.5.0 shipped the fix its own waiver recommended — a dedicated
+  // --border-control (3.38:1 light, 3.27:1 dark) used by the input, the Select
+  // trigger and DateField, leaving --border-default to the dividers. The row
+  // below now measures that token and passes, so the entry is gone rather than
+  // retired in place: a waiver kept past its fix hides the next regression.
 };
 
 /* ------------------------------------------------------------------ pairs */
@@ -340,7 +341,9 @@ const PAIRS = [
   { role: "Field error text", where: "FormField error", fg: "--status-bad", bg: ["--surface-card"], px: 11.5, weight: 500 },
 
   // ---- borders (1.4.11: only boundaries that IDENTIFY a control) ---------
-  { role: "Input border", where: "FormField / Select / DateField", fg: "--border-default", bg: ["--surface-card"], kind: "ui" },
+  // The one border tier that IDENTIFIES rather than separates, and therefore
+  // the one 1.4.11 actually asks 3:1 of. Its own token since 1.5.0.
+  { role: "Input border", where: "FormField / Select / DateField", fg: "--border-control", bg: ["--surface-card"], kind: "ui" },
   { role: "Secondary button border", where: "Button variant=secondary", fg: "--border-strong", bg: ["--surface-card"], kind: "ui" },
   { role: "Card border", where: "DomainCard", fg: "--border-default", bg: ["--surface-canvas"], kind: "ui" },
   { role: "Row rule", where: "DataTable tr", fg: "--border-row", bg: ["--surface-card"], kind: "ui" },

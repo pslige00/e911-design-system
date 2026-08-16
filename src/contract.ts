@@ -17,6 +17,28 @@
 export type Tone = "ok" | "warn" | "bad";
 export type EdgeColor = "orange" | "teal" | "gold" | "green" | "plum" | "blue";
 
+/**
+ * How big a control is PAINTED. Added in 1.5.0.
+ *
+ * `md` (--control-height, 32px) is the system's density and the default
+ * everywhere; `sm` (28px) is the compact button/chip. `tap` raises the painted
+ * box to --tap-target (44px) for a screen a finger actually uses — a kiosk, a
+ * wall tablet, a shift-change board.
+ *
+ * It is a PER-CONTROL opt-in on purpose. The alternative a consumer reached for
+ * first was raising --control-height, which resizes every control in every E911
+ * app to serve one screen. The alternative after that was `className="h-tap"`,
+ * which works on a bare <input> and silently does not on any component whose
+ * className lands on a wrapper — DateField drew a 44px box around a 32px input
+ * and nothing said so. One name, on every control in the family, is the version
+ * that can't be half-applied: a form set to `tap` is coherent at 44px.
+ *
+ * Not every control offers all three — Button is sm/md/tap, Chip is sm/tap, and
+ * the field controls are md/tap. Each narrows this union rather than inventing
+ * its own strings, so `size` means the same thing wherever it appears.
+ */
+export type ControlSize = "sm" | "md" | "tap";
+
 /** Domain → edge-color contract (see SKILL.md). One domain, one hue, everywhere. */
 export const DOMAIN_EDGE: Record<
   "operations" | "roster" | "certifications" | "qa" | "training" | "facilities",

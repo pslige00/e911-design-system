@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "./core";
+import { cn, CONTROL_HEIGHT, type ControlSize } from "./core";
 
 /* ---------------------------------------------------------- anchored layer */
 /**
@@ -160,6 +160,8 @@ export interface SelectProps<T extends string = string> {
   name?: string;
   disabled?: boolean;
   invalid?: boolean;
+  /** Painted height of the trigger (1.5.0). `tap` = 44px — see ControlSize. */
+  size?: Extract<ControlSize, "md" | "tap">;
   className?: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
@@ -188,6 +190,7 @@ export function Select<T extends string = string>({
   id,
   disabled = false,
   invalid = false,
+  size = "md",
   className,
   ...aria
 }: SelectProps<T>) {
@@ -362,16 +365,23 @@ export function Select<T extends string = string>({
         onKeyDown={onKeyDown}
         onClick={() => (open ? close(false) : openList(selectedIndex >= 0 ? selectedIndex : firstEnabled()))}
         className={cn(
-          "relative inline-flex h-ctl w-full items-center gap-2 rounded-sm border-chip bg-card",
-          "px-2.5 text-left text-[13px] transition duration-fast ease-e911",
+          "relative inline-flex w-full items-center gap-2 rounded-sm border-chip bg-card",
+          "text-left text-[13px] transition duration-fast ease-e911",
+          CONTROL_HEIGHT[size],
+          size === "tap" ? "px-3" : "px-2.5",
           "focus:border-[var(--focus-ring)] focus:outline-none",
           "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
           "disabled:cursor-not-allowed disabled:opacity-45",
-          // The control keeps the system's 32px height, but a finger needs 44px.
-          // The pseudo-element extends only the hit area, so density is unchanged
-          // — give stacked selects at least a 12px gap so the areas don't overlap.
-          "before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']",
-          invalid ? "border-bad" : "border-line",
+          // At `md` the control keeps the system's 32px height, but a finger
+          // needs 44px: the pseudo-element extends only the HIT area, so density
+          // is unchanged — give stacked selects at least a 12px gap so the areas
+          // don't overlap. At `tap` the painted box is already 44px and the
+          // extension would push the hit area to 56px and overlap the field
+          // above it, so it is dropped rather than stacked on top.
+          size === "md" && "before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']",
+          // --border-control (1.5.0): the trigger's stroke is what says "field"
+          // on a card of the same colour. See tokens.css.
+          invalid ? "border-bad" : "border-line-control",
           selected ? "text-ink" : "text-faint",
           className
         )}

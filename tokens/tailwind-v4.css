@@ -46,10 +46,13 @@
   --color-action-fg:     var(--text-on-action);
   --color-brand:         var(--e911-brand);
 
-  /* borders */
-  --color-line:        var(--border-default);
-  --color-line-strong: var(--border-strong);
-  --color-line-row:    var(--border-row);
+  /* borders. `line-control` is the FORM CONTROL boundary and the only one held
+     to 1.4.11's 3:1 — inputs, Select triggers, DateField. Cards and row rules
+     keep `line`; see tokens.css for why the two tiers are separate. */
+  --color-line:         var(--border-default);
+  --color-line-strong:  var(--border-strong);
+  --color-line-row:     var(--border-row);
+  --color-line-control: var(--border-control);
 
   /* status — always paired with a dot and a word, never color alone */
   --color-ok:        var(--status-ok);

@@ -8,9 +8,27 @@ import * as React from "react";
 // components must import from the package root (which points at contract.ts)
 // or from "./contract" directly. See the comment in contract.ts.
 export { cn, DOMAIN_EDGE } from "./contract";
-export type { Tone, EdgeColor } from "./contract";
+export type { Tone, EdgeColor, ControlSize } from "./contract";
 
-import { cn, type EdgeColor, type Tone } from "./contract";
+import { cn, type ControlSize, type EdgeColor, type Tone } from "./contract";
+
+/* ---------------------------------------------------------- control sizes */
+/**
+ * The painted height of every control in the system, in one place, because five
+ * components offer `size` and a form is only coherent if they agree. Height
+ * only: horizontal padding belongs to the control (a Button is padded for a
+ * label, an input for a caret), and the type scale does NOT follow size — a
+ * 44px field is the same 13px text, since `tap` is about what a finger can hit,
+ * not about what an eye can read.
+ *
+ * `tap` is --tap-target, the same 44px floor the rail rows and the calendar
+ * cells already use, so a tap-sized form lines up with the shell around it.
+ */
+export const CONTROL_HEIGHT: Record<ControlSize, string> = {
+  sm: "h-ctl-sm",
+  md: "h-ctl",
+  tap: "h-tap",
+};
 
 /* ------------------------------------------------------------- focus util */
 /**
@@ -36,7 +54,14 @@ type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-  size?: "md" | "sm";
+  /**
+   * `sm`/`md` unchanged; `tap` (1.5.0) paints the button at --tap-target for a
+   * kiosk or wall-tablet screen. Consumers were reaching this with
+   * `className="min-h-tap"`, which works on a Button and does not work on any
+   * control whose className lands on a wrapper — so the name is the system's
+   * now. See ControlSize.
+   */
+  size?: ControlSize;
 }
 
 const buttonVariant: Record<ButtonVariant, string> = {
@@ -59,7 +84,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         "inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
         "rounded-sm text-body transition duration-fast ease-e911",
         "disabled:opacity-45 disabled:cursor-not-allowed",
-        size === "md" ? "h-ctl px-3.5" : "h-ctl-sm px-2.5 text-[12px]",
+        CONTROL_HEIGHT[size],
+        // Padding follows the height so the label keeps its optical margins;
+        // only `sm` also steps the type down, which it did before 1.5.0 too.
+        size === "sm" ? "px-2.5 text-[12px]" : size === "tap" ? "px-4" : "px-3.5",
         buttonVariant[variant],
         className
       )}
@@ -73,17 +101,25 @@ Button.displayName = "Button";
 export interface ChipProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
+  /**
+   * `sm` (28px) is the filter row's own size and stays the default. `tap` is
+   * for a chip row a finger uses — the most-poked control on a wall board is
+   * usually a filter, and 28px is well under the floor. See ControlSize.
+   */
+  size?: Extract<ControlSize, "sm" | "tap">;
 }
 
 /** Filter chip. Active = brand-soft fill + brand text (never a status color). */
 export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
-  ({ active = false, className, type, ...rest }, ref) => (
+  ({ active = false, size = "sm", className, type, ...rest }, ref) => (
     <button
       ref={ref}
       type={type ?? "button"}
       aria-pressed={active}
       className={cn(
-        "h-ctl-sm px-3 rounded-sm border-chip text-[12px] transition duration-fast ease-e911",
+        CONTROL_HEIGHT[size],
+        size === "tap" ? "px-4" : "px-3",
+        "rounded-sm border-chip text-[12px] transition duration-fast ease-e911",
         active
           ? "border-action bg-brand-soft text-brand-text font-semibold"
           : "border-line bg-card text-muted font-medium hover:text-ink",

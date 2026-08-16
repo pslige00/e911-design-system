@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>E911 Design System — spec v1.4.0</title>
+<title>E911 Design System — spec v1.5.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -105,7 +105,16 @@ h1,h2,h3{margin:0} p{margin:0}
 
 .field{display:flex; flex-direction:column; gap:5px; max-width:340px}
 .field label{font-size:12.5px; font-weight:500; color:var(--text-secondary)}
-.input{height:var(--control-height); padding:0 10px; background:var(--surface-card); color:var(--text-primary); border:1.5px solid var(--border-default); border-radius:var(--e911-radius-sm); font:inherit; font-size:13px}
+/* --border-control, NOT --border-default. A field's stroke is the only thing
+   that identifies it — an input is --surface-card inside a card that is also
+   --surface-card — so this is the one border tier held to 1.4.11's 3:1. Every
+   divider around it stays on --border-default; flip to dark and compare. */
+.input{height:var(--control-height); padding:0 10px; background:var(--surface-card); color:var(--text-primary); border:1.5px solid var(--border-control); border-radius:var(--e911-radius-sm); font:inherit; font-size:13px}
+/* size="tap": the painted control at --tap-target, for a screen a finger uses.
+   A per-control opt-in — the system default stays --control-height. */
+.input.tap{height:var(--tap-target); padding:0 12px}
+.btn.tap{height:var(--tap-target); padding:0 16px}
+.chip.tap{height:var(--tap-target); padding:0 16px}
 .input:focus{outline:none; border-color:var(--focus-ring); box-shadow:0 0 0 3px color-mix(in srgb, var(--focus-ring) 20%, transparent)}
 .hint{font-size:11.5px; color:var(--text-tertiary)}
 .hint.err{color:var(--status-bad); font-weight:500}
@@ -127,7 +136,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
 <div class="top">
   <div class="top-in">
     <div class="seal">911</div>
-    <div><b>E911 Design System</b><small>v1.4.0 · Terrazzo × Solstice · Grotesk Standard</small></div>
+    <div><b>E911 Design System</b><small>v1.5.0 · Terrazzo × Solstice · Grotesk Standard</small></div>
     <div class="mode" role="group" aria-label="Theme">
       <button type="button" data-m="light" aria-pressed="true">Light</button>
       <button type="button" data-m="dark" aria-pressed="false">Dark</button>
@@ -208,6 +217,34 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           <span class="hint">Found on the top right of the IAED card.</span>
         </div>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:var(--e911-space-4)">
+      <span class="lab" style="display:block; margin-bottom:10px">Control size — <span class="mono">size="md"</span> (default) vs <span class="mono">size="tap"</span></span>
+      <div style="display:flex; flex-wrap:wrap; gap:var(--e911-space-6)">
+        <div style="display:flex; flex-direction:column; gap:8px">
+          <input class="input" value="EMD-2026-0147" aria-label="Certificate number, md">
+          <div style="display:flex; gap:8px; align-items:center">
+            <button class="btn btn-p">Record</button><button class="btn btn-s">Export</button><button class="chip">30 days</button>
+          </div>
+          <span class="hint"><span class="mono">--control-height</span> · 32px · desk screens</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px">
+          <input class="input tap" value="EMD-2026-0147" aria-label="Certificate number, tap">
+          <div style="display:flex; gap:8px; align-items:center">
+            <button class="btn btn-p tap">Record</button><button class="btn btn-s tap">Export</button><button class="chip tap">30 days</button>
+          </div>
+          <span class="hint"><span class="mono">--tap-target</span> · 44px · wall tablets, kiosks</span>
+        </div>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-secondary); margin-top:12px; max-width:70ch">
+        One prop across the control family — <span class="mono">Button</span>,
+        <span class="mono">Chip</span>, <span class="mono">Select</span>,
+        <span class="mono">DateField</span>, <span class="mono">FormField</span> — so a
+        tap-sized form is coherent rather than one raised control beside four
+        default ones. Never raise <span class="mono">--control-height</span> to get
+        here: that resizes every control in every E911 app.
+      </p>
     </div>
   </section>
 
@@ -311,7 +348,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <footer>
-    E911 Design System v1.4.0 · Locked 2026-08-14 · WCAG 2.1 AA enforced by npm run audit:contrast · Status is always pill + dot + word · Sample data only
+    E911 Design System v1.5.0 · Locked 2026-08-14 · WCAG 2.1 AA enforced by npm run audit:contrast · Status is always pill + dot + word · Sample data only
   </footer>
 </div>
 

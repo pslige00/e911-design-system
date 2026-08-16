@@ -37,6 +37,10 @@ export default {
           DEFAULT: "var(--border-default)",
           strong: "var(--border-strong)",
           row: "var(--border-row)",
+          /* `border-line-control` — the FORM CONTROL boundary, the only border
+             tier held to 1.4.11's 3:1. Inputs, Select triggers, DateField.
+             Cards and row rules keep DEFAULT; see tokens.css. */
+          control: "var(--border-control)",
         },
 
         ok: { DEFAULT: "var(--status-ok)", soft: "var(--status-ok-soft)" },

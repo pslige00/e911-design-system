@@ -35,8 +35,11 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
    rule used to read "anything smaller than 12px must be ≥ semibold and
    uppercase-label styled", which is what let `--text-tertiary` ship at 3.21:1
    under every table header in TimeSweep until 1.2.0. Non-text UI that conveys
-   state (active underline, domain edge) needs 3:1. `npm run audit:contrast`
-   checks every pair in both themes; run it after touching a colour.
+   state (active underline, domain edge) needs 3:1 — and so does the boundary of
+   a form control, which is what `--border-control` is for: it closed the
+   system's last 1.4.11 waiver in 1.5.0, taking an input's stroke from 1.31:1 to
+   3.38:1 in light and 1.89:1 to 3.27:1 in dark. `npm run audit:contrast` checks
+   every pair in both themes; run it after touching a colour.
 7. **Never draw your own focus ring.** One rule in `tokens.css` gives every
    focusable thing in every app a TWO-TONE indicator — `--focus-ring` with
    `--focus-ring-halo` either side of it — because no single colour clears 3:1
@@ -52,7 +55,18 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
      button is the label colour on the button's own surface — white on white.
 8. **Dark mode is free — keep it free.** Never branch on theme in app code;
    `[data-theme="dark"]` swaps the same semantic names.
-9. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component
+9. **A control never discards what an operator typed.** A rule since 1.5.0,
+   because `DateField` broke it and it cost a wage record: an out-of-range typed
+   date was treated as undoable — the draft reverted, no `onChange` fired, and a
+   leave form with `min={startDate}` filed twelve hours against a day the
+   employee never entered while the screen still said "1 day". A component
+   cannot know an app's error copy, so it must never be the thing that decides
+   an entry did not happen. `DateField` now KEEPS the text, emits the value
+   whenever it is a real date, reports `onReject({ text, value, reason, limit })`
+   either way, and marks itself `aria-invalid` until the operator edits it. The
+   app's validation gets to speak, in the app's words, via `FormField`'s
+   `error`. If you build a control that can refuse input, refuse it out loud.
+10. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component
    module.** Every component is `"use client"`; a value re-exported through a
    client module reaches a React Server Component as a client-reference proxy,
    so `DOMAIN_EDGE.operations` is not `"orange"`. `DomainCard` then matches no
@@ -141,6 +155,32 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   the header and the first table is rotor noise, not navigation.
 - **Filters:** chip row — 28px, 1.5px border, radius `--e911-radius-sm`;
   active chip = brand-soft fill + `--text-brand`.
+- **Controls:** `--control-height` (32px) is the system's density and the
+  default for `Button`, `Chip` (28px), `Select`, `DateField` and whatever
+  `FormField` wraps. Their boundary is `--border-control`, a tier of its own at
+  ≥3:1 — an input is `bg-card` inside a card that is also `bg-card`, so the
+  stroke is the only thing identifying the field (1.4.11). Dividers and row
+  rules stay on `--border-default`; do not swap one for the other.
+
+  **A screen a finger uses takes `size="tap"`,** which paints the control at
+  `--tap-target`. One prop across the whole family, so a kiosk form is coherent
+  instead of one raised control beside four default ones:
+
+  ```jsx
+  <FormField id="end" label="Last day off" size="tap">
+    {(props) => <DateField id={props.id} size="tap" value={end} onChange={setEnd} />}
+  </FormField>
+  <Button size="tap">Record</Button>
+  ```
+
+  Two things NOT to do instead, both tried first by consumers: raising
+  `--control-height` (it resizes every control in every E911 app to serve one
+  screen), and `className="h-tap"` (it works on a bare `<input>` and silently
+  does not on any component whose className lands on a wrapper — `DateField`
+  drew a 44px box around a 32px input and nothing said so). `FormField` does not
+  forward `size` into its child props: `size` on an `<input>` is a real HTML
+  attribute meaning width in characters, and `{...props}` would set it. Pass it
+  to both.
 - **Tables:** 40px rows, `--surface-sunken` header with 11px caps labels,
   row borders `--border-row`, mono for dates/IDs, cert codes as bordered
   mono chips.
@@ -151,6 +191,36 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   first cell (named after the row's subject) and keeps the whole row clickable
   for a pointer. Rows that go nowhere — totals, subheads — opt out with
   `rowClickable`, so a summary row stops claiming a cursor it cannot honour.
+
+  **Name the link by what it is FOR, with `rowLinkPurpose`** (1.5.0). Twenty-four
+  rows called "Never punched out" are twenty-four identical links in a rotor;
+  the purpose says which one goes where (2.4.4). It is a SUFFIX, not a label:
+  the component renders it visually-hidden AFTER the visible text, so the
+  accessible name begins with what the row says and WCAG 2.5.3 cannot be
+  violated by anything the callback returns. There is deliberately no
+  `rowLinkLabel` free-form prop — "Show 87" over a row reading "Never punched
+  out" would break speech control and nothing would catch it.
+
+  **Scope the link with `ctx.rowLink` when the first cell holds more than the
+  subject** (1.5.0). The anchor otherwise wraps the whole cell and the name
+  absorbs everything in it — a `StatusTag`'s severity word, a `CertChip`'s badge
+  number — which is informative by luck at best:
+
+  ```jsx
+  cell: (row, { rowLink }) => (
+    <span className="flex items-center gap-2">
+      {rowLink(<span className="font-medium">{row.name}</span>)}
+      <CertChip>{row.badge}</CertChip>
+      <StatusTag tone={row.tone}>{row.severity}</StatusTag>
+    </span>
+  )
+  // link name: "Huskey, Christopher — show these 36 in the queue"
+  // not:       "Huskey, Christopher KC-1119 Blocking"
+  ```
+
+  Not calling it keeps the pre-1.5.0 behaviour exactly. Call it once per row —
+  twice is two tab stops for one destination, and the component says so on the
+  console.
 - **KPI cards:** label (11px caps, `--text-tertiary`) → display numeral
   (`--font-size-kpi`, tabular) → sub-line with mono delta pill.
 
@@ -184,6 +254,10 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 - More than one ribbon per page; shadows deeper than `--shadow-pop`; radii other
   than the three tokens; new fonts of any kind
 - Status conveyed by color only; non-tabular digits in any numeric column
+- A form control drawn on `--border-default` (that tier separates; controls are
+  identified by `--border-control`, which is the one held to 3:1)
+- A control raised to finger size with a height utility instead of `size="tap"`,
+  or `--control-height` changed to serve one screen
 - `title="…"` used as a tooltip (rule 5), or an interactive target under
   `--tap-target` anywhere a finger can reach it
 - A local focus ring of any kind (rule 7), or `outline-color` in a transition

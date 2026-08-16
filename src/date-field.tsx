@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "./core";
+import { cn, CONTROL_HEIGHT, type ControlSize } from "./core";
 import { useAnchoredLayer, useDismissOnOutsidePress } from "./select";
 
 /* ==========================================================================
@@ -136,18 +136,77 @@ function ChevronIcon({ dir }: { dir: "left" | "right" }) {
 }
 
 /* -------------------------------------------------------------- DateField */
+/**
+ * Why a typed date was refused. `unparseable` is text that is not a date at all
+ * ("14/08/2026", "next tue"); the other three are real dates the field was told
+ * not to accept.
+ */
+export type DateFieldRejectionReason =
+  | "unparseable"
+  | "before-min"
+  | "after-max"
+  | "unavailable";
+
+export interface DateFieldRejection {
+  /** Exactly what the operator typed, trimmed. The evidence, verbatim. */
+  text: string;
+  /** The normalised `YYYY-MM-DD` — absent only when the text wasn't a date. */
+  value?: string;
+  reason: DateFieldRejectionReason;
+  /** The bound that refused it: `min` for before-min, `max` for after-max. */
+  limit?: string;
+}
+
 export interface DateFieldProps {
   id?: string;
   /** `YYYY-MM-DD`, or "" for empty. Never a Date — see the header note. */
   value: string;
-  /** Emits `YYYY-MM-DD`, or "" when the field is cleared. */
+  /**
+   * Emits `YYYY-MM-DD`, or "" when the field is cleared.
+   *
+   * Since 1.5.0 this ALSO fires for a real date that `min`/`max`/
+   * `isDateDisabled` refuse, with `onReject` alongside it saying so. Before
+   * 1.5.0 an out-of-range date was treated as undoable: the draft reverted and
+   * no event fired at all. That cost a consumer a wage record — a leave form
+   * with `min={startDate}` on its end date silently restored the start date
+   * when an employee typed an earlier one, the form still read "1 day", and
+   * twelve hours were filed against a date nobody entered. A component cannot
+   * know an app's error copy, so it must not be the thing that decides an entry
+   * never happened. The app's own validation now gets to speak.
+   */
   onChange: (value: string) => void;
+  /**
+   * A typed value was refused (1.5.0). Fires on commit — blur or Enter — with
+   * what was typed, the normalised date when there was one, and why.
+   *
+   * Pairs with `onChange` rather than replacing it: a refused-but-real date
+   * arrives through BOTH, so an app that only listens to `onChange` still sees
+   * the input and an app that wants to explain the refusal has the reason. Text
+   * that is not a date fires only this one — there is no ISO string to emit,
+   * and inventing one is how a field ends up filing a date nobody typed.
+   *
+   * The draft is never reverted either way: the refused text stays in the
+   * field, and the field marks itself `aria-invalid` until the operator edits
+   * it. What the refusal MEANS is the app's to say, in the app's words —
+   * `FormField`'s `error` is where it goes.
+   */
+  onReject?: (rejection: DateFieldRejection) => void;
   min?: string;
   max?: string;
   /** Extra blackout days (holidays, closed shifts). Receives `YYYY-MM-DD`. */
   isDateDisabled?: (iso: string) => boolean;
   disabled?: boolean;
   invalid?: boolean;
+  /**
+   * Painted height of the text input (1.5.0). `tap` = --tap-target, for a
+   * kiosk or wall-tablet form — see ControlSize.
+   *
+   * This is the prop to reach for rather than `className="h-tap"`: className
+   * lands on the WRAPPER (it has to — the calendar button is positioned inside
+   * it), so a height utility there drew a 44px box around a 32px input and
+   * nothing warned. The calendar button and every day cell are already 44px.
+   */
+  size?: Extract<ControlSize, "md" | "tap">;
   className?: string;
   "aria-label"?: string;
   "aria-describedby"?: string;
@@ -157,16 +216,23 @@ export function DateField({
   id,
   value,
   onChange,
+  onReject,
   min,
   max,
   isDateDisabled,
   disabled = false,
   invalid = false,
+  size = "md",
   className,
   ...aria
 }: DateFieldProps) {
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
+  // The last refusal, or null. The `invalid` prop stays the app's; this is the
+  // field saying "what is in me right now is not a date I accepted", which is
+  // true whether or not the app has noticed yet.
+  const [refusal, setRefusal] = React.useState<DateFieldRejection | null>(null);
+  const refused = refusal !== null;
   const [cursor, setCursor] = React.useState<string>(value || todayIsoDate());
   // Set only by grid interaction, so tabbing to the month buttons doesn't get
   // yanked back into the day grid on the next render.
@@ -186,18 +252,36 @@ export function DateField({
 
   // The input is the source of truth while it has focus; otherwise the prop is.
   React.useEffect(() => {
-    if (document.activeElement !== inputRef.current) setDraft(value);
+    if (document.activeElement === inputRef.current) return;
+    setDraft(value);
+    // A refusal SURVIVES the app echoing the refused date straight back — that
+    // is the other half of "let it through as invalid". An app that takes the
+    // value and validates it later still shows a field marked invalid; an app
+    // that replaces it with something else clears the mark, because the field
+    // is no longer holding the thing that was refused.
+    setRefusal((r) => (r && r.value === value ? r : null));
   }, [value]);
 
-  const dayDisabled = React.useCallback(
-    (iso: string): boolean => {
+  /**
+   * Why this date is refused, or null. One function so the grid's disabled
+   * cells and the typed value's rejection cannot drift apart — before 1.5.0
+   * this was a boolean and the caller could not be told which bound said no.
+   */
+  const refuse = React.useCallback(
+    (iso: string): { reason: DateFieldRejectionReason; limit?: string } | null => {
       // Lexicographic comparison is exactly correct for zero-padded ISO dates —
       // which is half the reason the value is carried as a string.
-      if (min && iso < min) return true;
-      if (max && iso > max) return true;
-      return isDateDisabled?.(iso) ?? false;
+      if (min && iso < min) return { reason: "before-min", limit: min };
+      if (max && iso > max) return { reason: "after-max", limit: max };
+      if (isDateDisabled?.(iso)) return { reason: "unavailable" };
+      return null;
     },
     [min, max, isDateDisabled]
+  );
+
+  const dayDisabled = React.useCallback(
+    (iso: string): boolean => refuse(iso) !== null,
+    [refuse]
   );
 
   const cursorYmd = parseIsoDate(cursor) ?? todayYmd();
@@ -219,29 +303,52 @@ export function DateField({
   };
 
   const pick = (iso: string) => {
+    // The grid never offers a refused day — it is dimmed, aria-disabled and
+    // cursor-not-allowed — so this path refuses visibly and needs no event.
     if (dayDisabled(iso)) return;
     setDraft(iso);
+    setRefusal(null);
     onChange(iso);
     closePicker(true);
   };
 
+  /**
+   * Commit on blur or Enter. NOTHING TYPED IS EVER DISCARDED SILENTLY — that is
+   * the whole contract of this function, and it is the one it broke until
+   * 1.5.0, where both refusal paths did `setDraft(value)` and returned with no
+   * event: the operator watched their entry turn back into the old one and the
+   * app was never told. See `onChange` / `onReject` above for the wage record
+   * that cost.
+   */
   const commitDraft = () => {
-    const trimmed = draft.trim();
-    if (trimmed === "") {
+    const text = draft.trim();
+    if (text === "") {
+      setRefusal(null);
       if (value !== "") onChange("");
       return;
     }
-    const parsed = parseIsoDate(trimmed);
-    // An unparseable draft snaps back rather than emitting garbage upward; the
-    // field is the wrong place to invent a date the operator didn't type.
+    const parsed = parseIsoDate(text);
     if (!parsed) {
-      setDraft(value);
+      // No ISO string exists to emit, so `onChange` stays quiet rather than
+      // sending garbage up a prop documented as YYYY-MM-DD. The text STAYS in
+      // the field — reverting it is what made this invisible — and the field
+      // marks itself invalid so the refusal is visible without the app's help.
+      const rejection: DateFieldRejection = { text, reason: "unparseable" };
+      setRefusal(rejection);
+      onReject?.(rejection);
       return;
     }
     const iso = formatIsoDate(parsed);
-    setDraft(iso);
-    if (iso !== value && !dayDisabled(iso)) onChange(iso);
-    else if (dayDisabled(iso)) setDraft(value);
+    setDraft(iso); // normalise what's shown; still exactly the day they typed
+    const blocked = refuse(iso);
+    const rejection: DateFieldRejection | null = blocked
+      ? { text, value: iso, reason: blocked.reason, limit: blocked.limit }
+      : null;
+    setRefusal(rejection);
+    if (rejection) onReject?.(rejection);
+    // Emitted either way. A bound the app set is the app's rule to enforce and
+    // to explain; the field's job is to report what the operator entered.
+    if (iso !== value) onChange(iso);
   };
 
   // Move DOM focus onto the cursor cell after the grid re-renders around it.
@@ -320,8 +427,12 @@ export function DateField({
         placeholder="YYYY-MM-DD"
         autoComplete="off"
         spellCheck={false}
-        aria-invalid={invalid || undefined}
-        onChange={(e) => setDraft(e.target.value)}
+        aria-invalid={invalid || refused || undefined}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          // Editing withdraws the refusal: the operator is answering it.
+          if (refused) setRefusal(null);
+        }}
         onBlur={commitDraft}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -334,14 +445,19 @@ export function DateField({
           }
         }}
         className={cn(
-          "h-ctl w-full rounded-sm border-chip bg-card pl-2.5 pr-tap text-[13px] text-ink",
+          "w-full rounded-sm border-chip bg-card pr-tap text-[13px] text-ink",
+          CONTROL_HEIGHT[size],
+          size === "tap" ? "pl-3" : "pl-2.5",
           // Dates are mono + tabular everywhere in this system, including while
           // they're being typed — the columns have to stay put.
           "font-mono tabular-nums",
           "focus:border-[var(--focus-ring)] focus:outline-none",
           "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
           "disabled:cursor-not-allowed disabled:opacity-45",
-          invalid ? "border-bad" : "border-line"
+          // `refused` is the field's own mark; `invalid` is the app's. Either
+          // one paints the bad border, and a refusal shows immediately rather
+          // than waiting for a render the app might not do.
+          invalid || refused ? "border-bad" : "border-line-control"
         )}
         {...aria}
       />

@@ -5,7 +5,16 @@ app lives in its own repo and depends on this one. See `SETUP.md` for how
 to consume it.
 
 **Direction:** Terrazzo × Solstice · **Type:** Grotesk Standard
-(Space Grotesk / Onest / JetBrains Mono) · **v1.4.0** · Locked 2026-08-14.
+(Space Grotesk / Onest / JetBrains Mono) · **v1.5.0** · Locked 2026-08-14.
+
+**New in 1.5.0**, all additive — nothing renamed, removed, or restyled:
+a `DataTable` row link can say what it is FOR (`rowLinkPurpose`) and can be
+scoped to the row's subject rather than swallowing the whole first cell
+(`ctx.rowLink`, the second argument to a `cell`); `DateField` no longer discards
+a typed date it refuses (`onReject`, and a real date reaches `onChange`
+regardless); every control in the family takes `size="tap"` for wall tablets;
+and `--border-control` closes the system's last WCAG 1.4.11 waiver — a form
+control's boundary measures 3.38:1 light / 3.27:1 dark, up from 1.31:1 / 1.89:1.
 
 | Path | What it is |
 |---|---|
