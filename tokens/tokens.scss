@@ -35,6 +35,9 @@ $e911-color-gold-100: #F7EFD7;
 $e911-color-gold-700: #7E6000;
 $e911-color-red-100: #F9E7E1;
 $e911-color-red-700: #A63A22;
+$e911-color-blue-100: #E5EDF8;
+$e911-color-blue-300: #7FB2E8;  // --status-info (dark) — see tokens.css
+$e911-color-blue-700: #2D5CA8;  // --status-info (light); NOT edge-blue #2E5FAE
 $e911-font-display: Space Grotesk;
 $e911-font-body: Onest;
 $e911-font-mono: JetBrains Mono;
@@ -55,6 +58,7 @@ $e911-radius-pill: 999px;
 $e911-motion-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
 $e911-motion-durationFast: 110ms;
 $e911-motion-duration: 170ms;
+$e911-motion-durationSlow: 240ms;  // size/position changes only — see tokens.css
 $e911-metric-controlHeight: 32px;
 $e911-metric-controlHeightSm: 28px;
 $e911-metric-tapTarget: 44px;

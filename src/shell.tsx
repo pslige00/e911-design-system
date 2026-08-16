@@ -299,7 +299,17 @@ export function AppShell({
         // It follows `pinned`, never `open` — that one word is the whole
         // no-reflow-on-hover contract.
         pinned ? "grid-cols-[var(--rail-width-expanded)_1fr]" : "grid-cols-[var(--rail-width)_1fr]",
-        "transition-[grid-template-columns] duration-base ease-e911"
+        // duration-slow, and it MUST stay in lockstep with the nav's own
+        // transition-[width] below: pinning moves both across the same 64px ->
+        // 224px on the same click, and a track that settles AFTER the rail leaves
+        // the rail wider than the column it lives in, overhanging <main> at
+        // z-rail for the difference. This ran at --e911-dur (170ms), the duration
+        // a chip's colour change uses; over 160px of layout it reads as clipped.
+        // tokens.css scopes the slow token by DISTANCE, not importance.
+        // Reduced motion is unaffected: tokens.css lists `.e911-app` ITSELF, not
+        // merely its descendants, precisely because this transition is on the
+        // shell root, and its 0.01ms is !important — which no utility can lose to.
+        "transition-[grid-template-columns] duration-slow ease-e911"
       )}
     >
       {/* FIRST in the DOM, and therefore first in tab order — which is the only
@@ -338,7 +348,12 @@ export function AppShell({
         className={cn(
           "relative z-rail flex flex-col gap-1.5 overflow-hidden",
           "border-r border-line bg-card px-2.5 py-3.5 max-md:hidden",
-          "transition-[width] duration-base ease-e911",
+          // Same 160px as the grid track on `.e911-app`, so the same token — see
+          // there for why the two cannot differ. RailLabel's fade deliberately
+          // stays on duration-base: an opacity change is neither size nor
+          // position, and finishing the fade first is what keeps a label from
+          // being clipped by the edge on the way closed.
+          "transition-[width] duration-slow ease-e911",
           open ? "w-rail-expanded" : "w-rail",
           // Lift it off the page only while it is genuinely floating over the
           // page; a pinned rail is part of the layout and a shadow would make it
@@ -350,7 +365,14 @@ export function AppShell({
           <RailIcon>
             <span
               aria-hidden
-              className="grid size-[30px] place-items-center rounded-pill bg-brand text-[9px] font-extrabold text-white"
+              // `text-seal`, not whichever other token happens to land near 9px:
+              // the "911" lockup is the one piece of type in the system exempt
+              // from the 1.4.3 contrast floor, and the token is scoped by name so
+              // that exemption cannot spread to anything else this small. Its
+              // line-height of 1 is invisible here — `place-items-center` centres
+              // the line box and half-leading is symmetric, so the glyphs sit
+              // exactly where they did under the inherited 1.5.
+              className="grid size-[30px] place-items-center rounded-pill bg-brand text-seal font-extrabold text-white"
             >
               911
             </span>
@@ -457,10 +479,40 @@ export function Ribbon({ eyebrow, title, subtitle, actions, className }: RibbonP
         aria-hidden
         className="absolute -right-[60px] -top-[80px] size-[240px] rounded-pill bg-white/10"
       />
+      {/* `tracking-[0.1em]` on the eyebrow is NOT redundant, and this is the one
+          thing to read before editing either line.
+
+          --text-micro is shared with the DataTable column header, whose tracking
+          is 0.06em while the eyebrow's is 0.1em. The token therefore declares NO
+          letter-spacing at all: any value it carried would be silently wrong at
+          one of the two. Both call sites state their own, and data.tsx says the
+          same thing from its side. Delete either as duplication and that header
+          silently changes letterform, which nothing type-checks and no test
+          catches. Stylesheet order is not the protection: a text-* utility
+          resolves letter-spacing through --tw-tracking, which is exactly what
+          tracking-* sets, so the explicit value wins regardless of emission
+          order.
+
+          No `leading-*` here, and none needed. Every 1.7.0 type token declares
+          font-size ONLY, so both lines still inherit 1.5 from `.e911-app`,
+          exactly as they did when they were px literals. During 1.7.0 the tokens
+          briefly bundled the leading each role "should" have (1.2 and 1.15),
+          which would have retightened this header by ~11px in every E911 app
+          under a commit saying nothing changed; it was pinned here with
+          `leading-normal` and then fixed properly in tokens.css instead, which
+          is the layer where it reaches every consumer at once. If tighter
+          display leading is ever wanted, that is still the place.
+
+          The h1 needs no `font-bold` or `tracking-[…]`: --text-ribbon-h1 does
+          carry 700 and -0.015em, at the values that shipped here as literals.
+          That token has one consumer, so it can afford to; --text-micro has two
+          that disagree, so it cannot. */}
       {eyebrow ? (
-        <div className="text-[10.5px] font-semibold uppercase tracking-[0.1em]">{eyebrow}</div>
+        <div className="text-micro font-semibold uppercase tracking-[0.1em]">
+          {eyebrow}
+        </div>
       ) : null}
-      <h1 className="mt-1 font-display text-[24px] font-bold tracking-[-0.015em]">{title}</h1>
+      <h1 className="mt-1 font-display text-ribbon-h1">{title}</h1>
       {subtitle ? <p className="mt-0.5 text-ribbon-meta opacity-95">{subtitle}</p> : null}
       {actions ? (
         // The scrim is the slot's, not the button's. Anything right-aligned on
@@ -492,7 +544,18 @@ export function RibbonButton({
     <button
       type={type ?? "button"}
       className={cn(
-        "h-[33px] rounded-[9px] px-3.5 text-ribbon-meta transition duration-fast ease-e911",
+        // `rounded-sm`, not the 9px this drew until 1.7.0. The system has four
+        // radii and a pill; 9px was a fifth, declared nowhere, so no consumer
+        // could name it or override it. Worse, it sat 1px OUTSIDE the actions
+        // plate's own `rounded-sm` — an inner corner rounder than the outer
+        // corner it nests 6px inside, which is the one nesting relationship that
+        // reads as a rendering fault rather than a choice.
+        // 8 and 10 are equidistant from 9, so "nearest" is settled by meaning:
+        // --e911-radius-sm is documented "chips, inputs, rail buttons" and
+        // --e911-radius-md is "cards". This is a button, and every other button
+        // in the system — Button in core.tsx included, at 1px shorter — is
+        // already rounded-sm.
+        "h-[33px] rounded-sm px-3.5 text-ribbon-meta transition duration-fast ease-e911",
         variant === "primary"
           ? // The pill and its label are ONE token pair. This read `bg-white
             // text-brand-text`, and --text-brand flips to a light orange in dark

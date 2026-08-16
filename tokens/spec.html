@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>E911 Design System — spec v1.6.0</title>
+<title>E911 Design System — spec v1.7.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -24,22 +24,22 @@ h1,h2,h3{margin:0} p{margin:0}
 .shell{max-width:1160px; margin:0 auto; padding:0 var(--e911-space-5) var(--e911-space-12)}
 .top{position:sticky; top:0; z-index:20; background:var(--surface-card); border-bottom:1px solid var(--border-default)}
 .top-in{max-width:1160px; margin:0 auto; padding:0 var(--e911-space-5); height:56px; display:flex; align-items:center; gap:var(--e911-space-3)}
-.seal{width:28px; height:28px; border-radius:var(--e911-radius-pill); background:var(--e911-brand); color:#fff; display:grid; place-items:center; font-size:9px; font-weight:800; font-family:var(--e911-font-body)}
+.seal{width:28px; height:28px; border-radius:var(--e911-radius-pill); background:var(--e911-brand); color:#fff; display:grid; place-items:center; font-size:var(--font-size-seal); font-weight:800; font-family:var(--e911-font-body)}
 .top b{font-family:var(--e911-font-display); font-size:15px}
-.top small{display:block; font-size:10.5px; color:var(--text-tertiary); margin-top:-2px}
+.top small{display:block; font-size:var(--font-size-micro); color:var(--text-tertiary); margin-top:-2px}
 .mode{margin-left:auto; display:flex; gap:2px; padding:3px; background:var(--surface-tint); border-radius:var(--e911-radius-pill)}
 .mode button{border:0; background:transparent; padding:5px 13px; border-radius:var(--e911-radius-pill); font-size:12px; font-weight:600; color:var(--text-secondary)}
 .mode button[aria-pressed="true"]{background:var(--action-primary); color:var(--text-on-action)}
 
 .sec{margin-top:var(--e911-space-8)}
 .sec > h2{font-family:var(--e911-font-display); font-size:var(--font-size-h2); letter-spacing:-.012em; padding-bottom:var(--e911-space-2); border-bottom:1px solid var(--border-default); margin-bottom:var(--e911-space-4)}
-.sec > h2 span{font-family:var(--e911-font-mono); font-size:11px; color:var(--text-tertiary); font-weight:400; margin-left:10px}
+.sec > h2 span{font-family:var(--e911-font-mono); font-size:var(--font-size-label); color:var(--text-tertiary); font-weight:400; margin-left:10px}
 
 .ribbon{position:relative; padding:var(--e911-space-5); border-radius:var(--e911-radius-lg); overflow:hidden; background:var(--ribbon-gradient); color:var(--ribbon-text); margin-top:var(--e911-space-5)}
 .ribbon::after{content:""; position:absolute; right:-60px; top:-80px; width:240px; height:240px; border-radius:50%; background:rgba(255,255,255,.10)}
-.ribbon .eyeb{font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase}
-.ribbon h1{font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:24px; margin-top:4px}
-.ribbon p{font-size:12.5px; margin-top:3px; opacity:.95}
+.ribbon .eyeb{font-size:var(--font-size-micro); font-weight:600; letter-spacing:.1em; text-transform:uppercase}
+.ribbon h1{font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-ribbon-h1); margin-top:4px}
+.ribbon p{font-size:var(--font-size-ribbon-meta); margin-top:3px; opacity:.95}
 /* The plate is the slot's, not the button's: anything right-aligned here sits
    on the gradient's gold terminus, where --ribbon-text alone is 2.4:1. */
 .ribbon .btns{position:absolute; right:var(--e911-space-4); top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:var(--e911-space-2);
@@ -55,15 +55,15 @@ h1,h2,h3{margin:0} p{margin:0}
 .card.edged{border-top:var(--card-edge-width) solid var(--edge, var(--e911-edge-orange))}
 .lab{font-size:var(--font-size-label); font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-tertiary)}
 .kpi{font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-kpi); font-variant-numeric:tabular-nums; margin-top:4px}
-.sub{display:flex; gap:6px; align-items:center; font-size:11.5px; color:var(--text-secondary); margin-top:4px}
-.mini{font-family:var(--e911-font-mono); font-size:10px; padding:1px 7px; border-radius:6px; font-weight:500}
+.sub{display:flex; gap:6px; align-items:center; font-size:var(--font-size-meta); color:var(--text-secondary); margin-top:4px}
+.mini{font-family:var(--e911-font-mono); font-size:var(--font-size-badge); padding:1px 7px; border-radius:6px; font-weight:500}
 .mini.up{background:var(--status-ok-soft); color:var(--status-ok)}
 .mini.dn{background:var(--status-bad-soft); color:var(--status-bad)}
 
 .sw{display:flex; flex-direction:column; border:1px solid var(--border-default); border-radius:var(--e911-radius-sm); overflow:hidden}
 .sw .c{height:44px}
 .sw .m{padding:5px 8px; background:var(--surface-sunken)}
-.sw .m b{display:block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--text-secondary); font-family:var(--e911-font-body)}
+.sw .m b{display:block; font-size:var(--font-size-micro); font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--text-secondary); font-family:var(--e911-font-body)}
 .sw .m span{font-family:var(--e911-font-mono); font-size:9.5px; color:var(--text-tertiary)}
 
 .trow{display:grid; grid-template-columns:150px 1fr; gap:var(--e911-space-4); padding:11px 0; border-bottom:1px solid var(--border-row); align-items:baseline}
@@ -76,14 +76,20 @@ h1,h2,h3{margin:0} p{margin:0}
 .btn-s:hover{background:var(--surface-tint)}
 .btn-q{color:var(--text-secondary); font-weight:500}
 .btn-q:hover{background:var(--surface-tint); color:var(--text-primary)}
-.chip{height:var(--control-height-sm); padding:0 12px; border-radius:var(--e911-radius-sm); border:1.5px solid var(--border-default); background:var(--surface-card); color:var(--text-secondary); font-size:12px; font-weight:500}
+.chip{height:var(--control-height-sm); padding:0 12px; border-radius:var(--e911-radius-sm); border:1.5px solid var(--border-default); background:var(--surface-card); color:var(--text-secondary); font-size:var(--font-size-ui-sm); font-weight:500}
 .chip[data-on]{border-color:var(--action-primary); background:var(--surface-brand-soft); color:var(--text-brand); font-weight:600}
-.tag{display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 9px; border-radius:var(--e911-radius-pill); font-size:11px; font-weight:600}
+.tag{display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 9px; border-radius:var(--e911-radius-pill); font-size:var(--font-size-label); font-weight:600}
 .tag i{width:5px; height:5px; border-radius:var(--e911-radius-pill); background:currentColor}
 .tag.ok{background:var(--status-ok-soft); color:var(--status-ok)}
 .tag.warn{background:var(--status-warn-soft); color:var(--status-warn)}
 .tag.bad{background:var(--status-bad-soft); color:var(--status-bad)}
-.cchip{display:inline-flex; align-items:center; height:20px; padding:0 7px; margin-right:4px; border-radius:6px; font-family:var(--e911-font-mono); font-size:10px; border:1.5px solid var(--border-default); color:var(--text-secondary)}
+/* Five tones since 1.7.0. Identical geometry for all of them — pill, dot, WORD —
+   which matters more at five than it did at three: the five light-mode tones sit
+   inside a 0.018 luminance spread, so the fills are five shades of one grey to a
+   dichromat. Squint at the row in the Controls card; the words survive it. */
+.tag.info{background:var(--status-info-soft); color:var(--status-info)}
+.tag.neutral{background:var(--status-neutral-soft); color:var(--status-neutral)}
+.cchip{display:inline-flex; align-items:center; height:20px; padding:0 7px; margin-right:4px; border-radius:6px; font-family:var(--e911-font-mono); font-size:var(--font-size-badge); border:1.5px solid var(--border-default); color:var(--text-secondary)}
 .cchip.w{border-color:var(--status-warn); background:var(--status-warn-soft); color:var(--status-warn)}
 .cchip.b{border-color:var(--status-bad); background:var(--status-bad-soft); color:var(--status-bad)}
 
@@ -109,14 +115,14 @@ h1,h2,h3{margin:0} p{margin:0}
    that identifies it — an input is --surface-card inside a card that is also
    --surface-card — so this is the one border tier held to 1.4.11's 3:1. Every
    divider around it stays on --border-default; flip to dark and compare. */
-.input{height:var(--control-height); padding:0 10px; background:var(--surface-card); color:var(--text-primary); border:1.5px solid var(--border-control); border-radius:var(--e911-radius-sm); font:inherit; font-size:13px}
+.input{height:var(--control-height); padding:0 10px; background:var(--surface-card); color:var(--text-primary); border:1.5px solid var(--border-control); border-radius:var(--e911-radius-sm); font:inherit; font-size:var(--font-size-control)}
 /* size="tap": the painted control at --tap-target, for a screen a finger uses.
    A per-control opt-in — the system default stays --control-height. */
 .input.tap{height:var(--tap-target); padding:0 12px}
 .btn.tap{height:var(--tap-target); padding:0 16px}
 .chip.tap{height:var(--tap-target); padding:0 16px}
 .input:focus{outline:none; border-color:var(--focus-ring); box-shadow:0 0 0 3px color-mix(in srgb, var(--focus-ring) 20%, transparent)}
-.hint{font-size:11.5px; color:var(--text-tertiary)}
+.hint{font-size:var(--font-size-meta); color:var(--text-tertiary)}
 .hint.err{color:var(--status-bad); font-weight:500}
 .input.err{border-color:var(--status-bad)}
 
@@ -124,7 +130,7 @@ h1,h2,h3{margin:0} p{margin:0}
    same token arithmetic in plain CSS, so a token move shows up here too.
    The row — not the box — is the tap target: --tap-target tall at both sizes,
    with the box at --check-size / --check-size-tap inside it. */
-.choice{display:inline-flex; align-items:flex-start; gap:10px; min-height:var(--tap-target); padding:12px 0; font-size:13px; color:var(--text-primary); cursor:pointer}
+.choice{display:inline-flex; align-items:flex-start; gap:10px; min-height:var(--tap-target); padding:12px 0; font-size:var(--font-size-control); color:var(--text-primary); cursor:pointer}
 .choice.tap{gap:12px; padding:10px 0}
 .choice.off{opacity:.45; cursor:not-allowed}
 .plate{position:relative; display:flex; align-items:center; min-height:1.5em; flex:0 0 auto}
@@ -151,13 +157,90 @@ h1,h2,h3{margin:0} p{margin:0}
 .choice input:indeterminate ~ .dash{opacity:1}
 @media (forced-colors: active){ .choice input{appearance:auto} .choice svg{display:none} }
 
+/* Disabled / selected (1.7.0) — tokens, not each control's own opacity. An
+   `opacity:.5` fades label, stroke and focus ring together by a factor, landing
+   wherever the surface underneath happens to put it; these land on a measured
+   2.90:1 light / 3.23:1 dark of label on its own fill — quiet, still readable at
+   arm's length, and below any floor it would owe if 1.4.3 did not exempt it. */
+.btn[disabled], .chip[disabled], .input[disabled]{background:var(--surface-disabled); color:var(--text-disabled); border-color:var(--border-disabled); cursor:not-allowed}
+.btn-p[disabled]{border-color:transparent}
+/* An option list — the reason --surface-selected exists. Hover the UNSELECTED
+   rows: selected has to outrank the pointer, so it is a step darker than
+   --surface-tint in light and a step lighter in dark. Before 1.7.0 both were
+   tint, and hovering an unselected option made it look chosen. */
+.opts{display:flex; flex-direction:column; border:1.5px solid var(--border-control); border-radius:var(--e911-radius-sm); background:var(--surface-card); overflow:hidden; max-width:320px}
+.opt{display:flex; align-items:center; gap:8px; height:var(--tap-target); padding:0 12px; font-size:var(--font-size-control); color:var(--text-primary); border:0; background:transparent; text-align:left}
+.opt:hover{background:var(--surface-tint)}
+/* FOUR signals, not one. The fill is 1.31:1 on card and identifies nothing on
+   its own; --border-selected (= --action-primary, 3.53:1 light / 4.28:1 dark)
+   carries 1.4.11, aria-selected carries it non-visually, and the check mark and
+   weight carry it for anyone who reads shapes rather than shades. Nobody removes
+   the check on the grounds that the fill now exists. */
+.opt[aria-selected="true"]{background:var(--surface-selected); font-weight:600; color:var(--text-brand); box-shadow:inset 3px 0 0 var(--border-selected)}
+.opt svg{flex:0 0 auto}
+.opt[aria-disabled="true"]{color:var(--text-disabled); background:var(--surface-disabled); cursor:not-allowed}
+
+/* Browser surfaces (1.7.0). Nothing below is declared here — every one of them
+   comes from the `.e911-app` block in tokens.css. This card is the proof. */
+.surf ul{margin:0; padding-left:20px}
+.surf li{margin:2px 0}
+.surf a{color:var(--text-brand)}
+.scrollbox{max-height:96px; overflow:auto; border:1px solid var(--border-default); border-radius:var(--e911-radius-sm); padding:8px 10px; background:var(--surface-sunken)}
+
+/* A DataTable's horizontal overflow is a NAMED, FOCUSABLE region (1.7.0). Tab to
+   it and use the arrow keys — a scroller that only answers a drag is a 2.1.1
+   failure on a wall tablet, where the "drag" is a finger on a table that is
+   wider than the glass. */
+.scroller{overflow-x:auto; border-radius:var(--e911-radius-md)}
+/* Wide enough to actually overflow this page at desk widths — the point of the
+   demo is the scroll, not the claim. A real timecard gets here honestly: eight
+   whitespace-nowrap headers whose widths sum past the card. */
+.scroller table{min-width:1180px}
+
+/* Empty and loading (1.7.0). Before this, a table still fetching and a table
+   with nothing in it were the same rendering, so an operator on a slow link
+   read "No exceptions" off a queue that had forty. */
+/* Mirrors src/feedback.tsx. The title is deliberately NOT a heading at any
+   rung: an EmptyState almost always lands inside a DomainCard that already owns
+   one, and the outline is a decision the page makes (DomainCard's titleLevel),
+   not one a component may plant wherever it renders. It is the loudest thing in
+   the box by size and weight, which is what the eye uses here anyway. */
+.empty{display:flex; flex-direction:column; align-items:center; gap:var(--e911-space-2); padding:var(--e911-space-8) var(--e911-space-4); text-align:center}
+.empty b{font-size:var(--font-size-body); font-weight:600; color:var(--text-primary)}
+/* A measure, not a container width — centred prose running the full width of a
+   1440px card is two eye-sweeps per line. */
+.empty p{font-size:var(--font-size-ui-sm); color:var(--text-secondary); max-width:42ch}
+.empty .ico{width:36px; height:36px; display:grid; place-items:center; border-radius:var(--e911-radius-pill); background:var(--surface-tint); color:var(--text-tertiary)}
+.sk{display:block; height:11px; border-radius:var(--e911-radius-sm); background:var(--surface-tint); animation:skp 2s var(--e911-ease) infinite}
+.skrow{display:grid; grid-template-columns:2fr 1fr 1fr; gap:var(--e911-space-4); align-items:center; height:var(--row-height); padding:0 var(--e911-space-4); border-bottom:1px solid var(--border-row)}
+@keyframes skp{0%,100%{opacity:1} 50%{opacity:.45}}
+/* The one place the global reduced-motion rule is not enough, and the real
+   Skeleton carries the same line as motion-reduce:animate-none. tokens.css
+   clamps every animation under .e911-app to 0.01ms, which STOPS a transition
+   and does not stop a loop: an infinite pulse at 0.01ms keeps running, so the
+   browser samples it at an arbitrary point every frame and the bar strobes —
+   faster motion than before the user asked for less. Parked at its resting
+   style it is a fully opaque bg-tint bar, which is still plainly visible; a
+   skeleton that vanishes for a reduced-motion user is a blank card. */
+@media (prefers-reduced-motion: reduce){ .sk{animation:none} }
+
+/* Motion, scoped by DISTANCE (1.7.0). Hover both bars: the top one changes a
+   colour at --e911-dur, which reads as instant; the bottom one changes 220px of
+   WIDTH, which at the same 170ms reads as clipped. That is the whole argument
+   for --e911-dur-slow. */
+.mv{display:flex; flex-direction:column; gap:10px}
+.mvbar{display:block; height:28px; width:60px; border-radius:var(--e911-radius-sm); background:var(--action-primary)}
+.mv:hover .mvbar{width:280px}
+.mvbar.base{transition:width var(--e911-dur) var(--e911-ease)}
+.mvbar.slow{transition:width var(--e911-dur-slow) var(--e911-ease)}
+
 table{width:100%; border-collapse:collapse}
-th{text-align:left; padding:8px var(--e911-space-4); font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-tertiary); border-bottom:1px solid var(--border-default); background:var(--surface-sunken); white-space:nowrap}
+th{text-align:left; padding:8px var(--e911-space-4); font-size:var(--font-size-micro); font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-tertiary); border-bottom:1px solid var(--border-default); background:var(--surface-sunken); white-space:nowrap}
 td{padding:0 var(--e911-space-4); height:var(--row-height); border-bottom:1px solid var(--border-row); font-size:var(--font-size-table); vertical-align:middle}
 tr:last-child td{border-bottom:0}
 .mono{font-family:var(--e911-font-mono); font-variant-numeric:tabular-nums; font-size:var(--font-size-mono); color:var(--text-secondary)}
 
-footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-top:1px solid var(--border-default); color:var(--text-tertiary); font-size:12px}
+footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-top:1px solid var(--border-default); color:var(--text-tertiary); font-size:var(--font-size-ui-sm)}
 @media (max-width:860px){ .g3,.g4{grid-template-columns:repeat(2,1fr)} .g2{grid-template-columns:1fr} .ribbon .btns{position:static; transform:none; margin-top:12px} }
 @media (max-width:560px){ .g3,.g4{grid-template-columns:1fr} }
 </style>
@@ -167,7 +250,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
 <div class="top">
   <div class="top-in">
     <div class="seal">911</div>
-    <div><b>E911 Design System</b><small>v1.6.0 · Terrazzo × Solstice · Grotesk Standard</small></div>
+    <div><b>E911 Design System</b><small>v1.7.0 · Terrazzo × Solstice · Grotesk Standard</small></div>
     <div class="mode" role="group" aria-label="Theme">
       <button type="button" data-m="light" aria-pressed="true">Light</button>
       <button type="button" data-m="dark" aria-pressed="false">Dark</button>
@@ -194,6 +277,10 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       <div class="sw"><div class="c" style="background:var(--status-ok-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-ok); font-weight:700; font-size:12px">ok</div></div><div class="m"><b>status-ok</b><span>green-700 on 100</span></div></div>
       <div class="sw"><div class="c" style="background:var(--status-warn-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-warn); font-weight:700; font-size:12px">warn</div></div><div class="m"><b>status-warn</b><span>gold-700 on 100</span></div></div>
       <div class="sw"><div class="c" style="background:var(--status-bad-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-bad); font-weight:700; font-size:12px">bad</div></div><div class="m"><b>status-bad</b><span>red-700 on 100</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--status-info-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-info); font-weight:700; font-size:12px">info</div></div><div class="m"><b>status-info</b><span>blue-700 on 100 · 1.7.0</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--status-neutral-soft)"><div style="height:100%; display:grid; place-items:center; color:var(--status-neutral); font-weight:700; font-size:12px">neutral</div></div><div class="m"><b>status-neutral</b><span>warm-600 on 100 · 1.7.0</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--surface-disabled); display:grid; place-items:center"><span style="color:var(--text-disabled); font-weight:600; font-size:12px">disabled</span></div><div class="m"><b>surface/text-disabled</b><span>2.90:1 on its own fill</span></div></div>
+      <div class="sw"><div class="c" style="background:var(--surface-selected); border-left:3px solid var(--border-selected)"></div><div class="m"><b>surface-selected</b><span>1.31:1 — the border identifies</span></div></div>
       <div class="sw"><div class="c" style="background:var(--ribbon-gradient)"></div><div class="m"><b>ribbon-gradient</b><span>brand surface</span></div></div>
     </div>
     <div class="grid g3" style="margin-top:var(--e911-space-4)">
@@ -207,13 +294,45 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <section class="sec">
-    <h2>Type <span>Space Grotesk · Onest · JetBrains Mono</span></h2>
+    <h2>Type <span>Space Grotesk · Onest · JetBrains Mono · every size is a token (1.7.0)</span></h2>
     <div class="card">
-      <div class="trow"><span class="lab">display / h1</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-h1)">Certification watchlist</span></div>
-      <div class="trow"><span class="lab">kpi numeral</span><span class="kpi" style="margin:0">94.6%&nbsp;&nbsp;128&nbsp;&nbsp;97.1%</span></div>
-      <div class="trow"><span class="lab">body</span><span style="font-size:var(--font-size-body)">Renewals are due 30 days before a certification lapses. Supervisors get one reminder; after that the record moves to Action needed.</span></div>
-      <div class="trow"><span class="lab">label</span><span class="lab" style="color:var(--text-secondary)">Next expiry — Shift B</span></div>
-      <div class="trow"><span class="lab">mono / data</span><span class="mono">2026-09-14 · TC-1184 · 865-215-0911 · EMD-2026-0147</span></div>
+      <div class="trow"><span class="lab">kpi · 25</span><span class="kpi" style="margin:0">94.6%&nbsp;&nbsp;128&nbsp;&nbsp;97.1%</span></div>
+      <div class="trow"><span class="lab">ribbon-h1 · 24</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-ribbon-h1)">Pay Period 14</span></div>
+      <div class="trow"><span class="lab">h1 · 20</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-h1)">Certification watchlist</span></div>
+      <div class="trow"><span class="lab">h2 · 16</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.012em; font-size:var(--font-size-h2)">Exceptions this period</span></div>
+      <div class="trow"><span class="lab">h3 · 14.5</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.01em; font-size:var(--font-size-h3)">Certification watchlist</span></div>
+      <div class="trow"><span class="lab">body · 13.5</span><span style="font-size:var(--font-size-body)">Renewals are due 30 days before a certification lapses. Supervisors get one reminder; after that the record moves to Action needed.</span></div>
+      <div class="trow"><span class="lab">control · 13</span><span style="font-size:var(--font-size-control)">The value inside an input, a Select trigger, a Checkbox label — one step down from prose on purpose.</span></div>
+      <div class="trow"><span class="lab">table · 12.8</span><span style="font-size:var(--font-size-table)">Whitfield, D. · Shift A · 2026-08-26 · 12 days</span></div>
+      <div class="trow"><span class="lab">ribbon-meta · 12.5</span><span style="font-size:var(--font-size-ribbon-meta)">Ribbon subtitle, RibbonButton labels, anything in the actions slot.</span></div>
+      <div class="trow"><span class="lab">ui-sm · 12</span><span style="font-size:var(--font-size-ui-sm)">Chip size="sm" · Tooltip · a toast action · a calendar day</span></div>
+      <div class="trow"><span class="lab">meta · 11.5</span><span style="font-size:var(--font-size-meta); color:var(--text-secondary)">KPI sub-line, FormField hint and error</span></div>
+      <div class="trow"><span class="lab">label · 11</span><span class="lab" style="color:var(--text-secondary)">Next expiry — Shift B</span></div>
+      <div class="trow"><span class="lab">micro · 10.5</span><span style="font-size:var(--font-size-micro); font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-tertiary)">Ribbon eyebrow · DataTable column header</span></div>
+      <div class="trow"><span class="lab">badge · 10</span><span class="mono" style="font-size:var(--font-size-badge)">EMD · CPR 21d · +1.2</span></div>
+      <div class="trow"><span class="lab">mono · 12</span><span class="mono">2026-09-14 · TC-1184 · 865-215-0911 · EMD-2026-0147</span></div>
+      <div class="trow"><span class="lab">seal · 9</span><span class="seal" style="width:26px; height:26px">911</span></div>
+    </div>
+    <div class="card" style="margin-top:var(--e911-space-4)">
+      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+        Seven of these were <span class="mono">text-[Npx]</span> literals inside this
+        package's own components until 1.7.0 — 27 of them, across 8 components, at 9
+        sizes that appeared nowhere in <span class="mono">tokens.css</span>. App code has
+        been forbidden from writing a raw size since 1.0.0; the package was doing it,
+        which meant a consumer could not name them, override them, or be linted against
+        them. <b>No rendered pixel changed here.</b> Whether 10.5 and 11 should be one
+        size is a real argument and a visual change; it does not belong in the same pass
+        as a rename.
+      </p>
+      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch; margin-top:10px">
+        <b>Two sizes for one element, on purpose.</b>
+        <span class="mono">--font-size-ribbon-h1</span> (24px) is the headline of a
+        painted band, sized against the band. <span class="mono">--font-size-h1</span>
+        (20px) is the h1 of a page with <i>no ribbon at all</i> — sign-in and the kiosk,
+        which is exactly where its single consumer lives. Before 1.7.0 the ribbon
+        hard-coded 24px, so the system's stated "h1 size" was a size that 95% of its h1s
+        did not use.
+      </p>
     </div>
   </section>
 
@@ -231,7 +350,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           <button class="chip" data-on>30 days</button><button class="chip">Quarter</button><button class="chip">All shifts</button><button class="chip">Shift B</button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center">
-          <span class="tag ok"><i></i>Current</span><span class="tag warn"><i></i>Due soon</span><span class="tag bad"><i></i>Lapsed</span>
+          <span class="tag ok"><i></i>Current</span><span class="tag warn"><i></i>Due soon</span><span class="tag bad"><i></i>Lapsed</span><span class="tag info"><i></i>Live estimate</span><span class="tag neutral"><i></i>Voluntary</span>
           <span class="cchip">EMD</span><span class="cchip w">CPR 21d</span><span class="cchip b">TIES −4d</span>
         </div>
       </div>
@@ -356,6 +475,312 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <section class="sec">
+    <h2>Status tones <span>five since 1.7.0 — pill + dot + word, always</span></h2>
+    <div class="grid g2">
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:10px">The five, at the same geometry</span>
+        <div style="display:flex; flex-direction:column; gap:9px; align-items:flex-start">
+          <span class="tag ok"><i></i>Approved</span>
+          <span class="tag warn"><i></i>Missing punch</span>
+          <span class="tag bad"><i></i>Rejected</span>
+          <span class="tag info"><i></i>Live estimate</span>
+          <span class="tag neutral"><i></i>Voluntary</span>
+        </div>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:14px; max-width:52ch">
+          Squint at that column, or step back from the screen. Relative luminance of the
+          five light-mode fills: info <span class="mono">0.1104</span> · bad
+          <span class="mono">0.1125</span> · ok <span class="mono">0.1132</span> ·
+          neutral <span class="mono">0.1135</span> · warn <span class="mono">0.1280</span>
+          — a <b>0.018 spread</b>, three of them inside 0.001 of each other. Each clears
+          4.5:1 on its own fill (5.14–5.58), which is all AA asks and all it asks: to a
+          dichromat, or across a dim room, these are five shades of one grey.
+          <b>The word is the channel that survives that.</b> Going from three tones to
+          five doubles down on it rather than diluting it.
+        </p>
+      </div>
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:10px">Why the system stopped at three, and why it stopped stopping</span>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch">
+          The three-tone rule had a good argument behind it — <i>a status with no tone is
+          a status the reader has to interpret</i> — and it was refused several times
+          before this. The census that overturned it, from the first consuming app:
+          <b>warn was used 84 times across ~60 distinct labels, and about 17 were
+          cautionary.</b> The rest were classification ("Note", "Net", "Moves money",
+          "Eligible", "Live estimate") and plain absence ("No timesheet", "Not
+          configured", "No roster for this date"). Gold meant <i>needs attention</i> and
+          <i>pay is not in question</i> on the same screen. The two new tones give the
+          amber back its meaning; they do not let a status avoid having one.
+        </p>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+          <b>When neutral is legitimate.</b> A state that is real, known, and carries no
+          judgement — a classification the operator should read but need not act on. It
+          is not the tone for "I could not decide". The test:
+          <b>if the label reads exactly the same with no pill at all, the answer is no
+          pill, not a neutral one.</b>
+        </p>
+        <div style="display:flex; gap:var(--e911-space-6); margin-top:14px; flex-wrap:wrap">
+          <div>
+            <span class="lab" style="display:block; margin-bottom:6px; color:var(--status-ok)">Yes</span>
+            <span class="tag neutral"><i></i>Salaried</span>
+          </div>
+          <div>
+            <span class="lab" style="display:block; margin-bottom:6px; color:var(--status-bad)">No — this is no pill</span>
+            <span class="tag neutral"><i></i>3 shifts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Disabled &amp; selected <span>tokens since 1.7.0, not each component's own opacity</span></h2>
+    <div class="grid g2">
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:10px">Disabled</span>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center">
+          <button class="btn btn-p" disabled>Approve</button>
+          <button class="btn btn-s" disabled>Export</button>
+          <button class="chip" disabled>Shift B</button>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label for="dz">Locked pay period</label>
+          <input class="input" id="dz" value="2026-08-01 — 2026-08-14" disabled>
+        </div>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:12px; max-width:56ch">
+          Before 1.7.0 there was no token, so <span class="mono">Button</span>,
+          <span class="mono">Select</span> and <span class="mono">DateField</span> each
+          chose their own opacity or their own grey and nothing compared them — the same
+          drift that produced the 2.01:1 ribbon label. WCAG 1.4.3 exempts a disabled
+          control from the contrast floor, and the audit records these as
+          <span class="mono">kind:"disabled"</span> rather than failing them. That
+          exemption is permission to be <b>quiet, not permission to be unreadable</b>: a
+          dispatcher still has to read WHICH action is unavailable to know what to do
+          instead. The honest figure, not the flattering one:
+          <span class="mono">--text-disabled</span> is 3.38:1 on
+          <span class="mono">--surface-card</span>, but <b>2.90:1 light / 3.23:1 dark on
+          <span class="mono">--surface-disabled</span></b> — which is where a disabled
+          Button's label actually sits. If a later change makes disabled text quieter,
+          2.90 is the number to argue against. The boundary is deliberately fainter still
+          (1.33–1.55 light): the fill and the label already say "unavailable", and a
+          border held to 3:1 would make the disabled control the loudest object in the
+          form.
+        </p>
+      </div>
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:10px">Selected — hover the other rows</span>
+        <div class="opts" role="listbox" aria-label="Cover type">
+          <div class="opt" role="option" aria-selected="false"><span style="width:14px"></span>Voluntary substitution</div>
+          <div class="opt" role="option" aria-selected="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="var(--text-brand)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.4l3 3L12.5 5"/></svg>Directed cover</div>
+          <div class="opt" role="option" aria-selected="false"><span style="width:14px"></span>Shift extension</div>
+          <div class="opt" role="option" aria-selected="false" aria-disabled="true"><span style="width:14px"></span>Callback — unavailable</div>
+        </div>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:12px; max-width:56ch">
+          Three states that look adjacent and are not.
+          <span class="mono">--surface-tint</span> is a POINTER resting somewhere;
+          <span class="mono">--surface-brand-soft</span> is the active nav DESTINATION, a
+          statement about where you are; <span class="mono">--surface-selected</span> is
+          what the operator CHOSE. <span class="mono">Select</span>'s option list and
+          <span class="mono">DateField</span>'s calendar used tint for all three, so
+          hovering an unselected option made it look chosen. Selected is one step darker
+          than tint in light and one step lighter in dark — a choice outranks a pointer,
+          so it has to survive being hovered. Flip the theme and hover both.
+        </p>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:12px; max-width:56ch">
+          <b>The fill is not the identifier, and must not become one.</b>
+          <span class="mono">--surface-selected</span> is 1.31:1 on card in light and
+          1.17:1 in dark — nowhere near the 3:1 that 1.4.11 asks of a boundary
+          identifying a component state, and raising it there would put a mid-grey bar
+          through a table meant to be read.
+          <span class="mono">--border-selected</span> carries the requirement instead:
+          it is <span class="mono">--action-primary</span>, 3.53:1 light and 4.28:1 dark.
+          Every consumer must ALSO carry the state non-visually —
+          <span class="mono">aria-selected</span> or <span class="mono">aria-current</span>,
+          which the list above does — and <span class="mono">Select</span> additionally
+          keeps a check mark, a font-weight and <span class="mono">--text-brand</span>.
+          Nobody removes that check mark on the grounds that the fill now exists: the
+          fill is the weakest of the four signals, not the strongest.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Browser surfaces <span>six things that were still the browser's until 1.7.0</span></h2>
+    <div class="grid g2">
+      <div class="card surf">
+        <span class="lab" style="display:block; margin-bottom:10px">Nothing here is declared on this page</span>
+        <p style="font-size:var(--font-size-body); max-width:56ch">
+          Drag across this sentence — the selection band is
+          <span class="mono">--action-primary</span> carrying
+          <span class="mono">--text-on-action</span>, the same pair the audit already
+          scores as a primary button's label. Chrome's default is
+          <span class="mono">#3477F5</span>, on a palette with no cool hue anywhere in it.
+        </p>
+        <div class="field" style="margin-top:12px">
+          <label for="bs1">Click in — the caret is --action-primary</label>
+          <input class="input" id="bs1" placeholder="…and the placeholder is --text-tertiary, at opacity 1">
+        </div>
+        <ul style="margin-top:12px; font-size:var(--font-size-body)">
+          <li>::marker is --text-tertiary</li>
+          <li>a link's underline sits at 2px offset, 1px thick —
+            <a href="./tokens.css">not cutting its descenders</a></li>
+        </ul>
+        <div class="scrollbox" style="margin-top:12px">
+          <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary)">
+            Scroll me. <span class="mono">scrollbar-color</span> tints the thumb with
+            <span class="mono">--border-strong</span> and leaves the track transparent.
+            It is the STANDARD two-value property on purpose: the
+            <span class="mono">::-webkit-scrollbar</span> family can redraw the widget
+            completely, and a redrawn scrollbar loses the platform's overlay behaviour,
+            its touch expansion, and — on a wall tablet — its hit area. Tinting a thumb
+            is theming; redrawing the widget is shipping a different control.
+            <br><br>More text so this actually overflows and the bar appears.
+          </p>
+        </div>
+      </div>
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:10px">Why this is not a cosmetic pass</span>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch">
+          A dispatcher selecting a badge number to paste into the CAD got a cobalt band
+          across a warm-neutral table — the one moment in the app that looked like an
+          unstyled form. And <span class="mono">--border-control</span> was raised to 3:1
+          in 1.5.0 precisely because "an empty field on a wall tablet at arm's length was
+          invisible"; a placeholder left at the browser's
+          <span class="mono">#9AA0A6</span> undoes half of that on the same field.
+        </p>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+          The base block also sets <span class="mono">::placeholder { opacity: 1 }</span>,
+          and that line is load-bearing rather than tidy: Firefox ships the pseudo-element
+          at 0.54, which would take <span class="mono">--text-tertiary</span> from its
+          audited 4.98:1 to roughly 2.6:1 — a tier raised in 1.2.0 specifically to clear
+          4.5:1, silently undone by a UA default in one browser.
+        </p>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+          Every value in the block is a token that already existed. It spends no new
+          colour — it stops shipping the browser's opinion of six surfaces the system had
+          otherwise decided everything about.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Empty, loading &amp; the scroll region <span>DataTable · EmptyState · Skeleton — 1.7.0</span></h2>
+    <div class="grid g2">
+      <div class="card edged" style="--edge:var(--e911-edge-orange); padding:0; overflow:hidden">
+        <div style="display:flex; align-items:center; gap:9px; padding:12px var(--e911-space-4); border-bottom:1px solid var(--border-default)">
+          <h3 style="font-family:var(--e911-font-display); font-size:var(--font-size-h3); letter-spacing:-.01em">Exception queue</h3>
+          <span class="tag ok" style="margin-left:auto"><i></i>Clear</span>
+        </div>
+        <div class="empty">
+          <span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>
+          <b>No exceptions in this pay period</b>
+          <p>Punches are matched overnight, so today's exceptions appear tomorrow morning.</p>
+          <button class="btn btn-s" style="margin-top:4px">Clear filters</button>
+        </div>
+      </div>
+      <div class="card edged" style="--edge:var(--e911-edge-orange); padding:0; overflow:hidden">
+        <div style="display:flex; align-items:center; gap:9px; padding:12px var(--e911-space-4); border-bottom:1px solid var(--border-default)">
+          <h3 style="font-family:var(--e911-font-display); font-size:var(--font-size-h3); letter-spacing:-.01em">Exception queue</h3>
+          <span class="tag neutral" style="margin-left:auto"><i></i>Loading</span>
+        </div>
+        <div aria-busy="true" aria-live="polite">
+          <div class="skrow"><span class="sk" style="width:70%"></span><span class="sk" style="width:52%"></span><span class="sk" style="width:38%"></span></div>
+          <div class="skrow"><span class="sk" style="width:58%"></span><span class="sk" style="width:64%"></span><span class="sk" style="width:44%"></span></div>
+          <div class="skrow"><span class="sk" style="width:76%"></span><span class="sk" style="width:47%"></span><span class="sk" style="width:35%"></span></div>
+          <div class="skrow" style="border-bottom:0"><span class="sk" style="width:62%"></span><span class="sk" style="width:58%"></span><span class="sk" style="width:41%"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:var(--e911-space-4)">
+      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+        These are two states, not one. Until 1.7.0 a table still fetching and a table with
+        nothing in it were the <b>same rendering</b>, so an operator on a slow link read
+        "No exceptions" off a queue that had forty — which is why
+        <span class="mono">loading</span> outranks the empty path in
+        <span class="mono">DataTable</span> rather than racing it. And "No rows" is not a
+        state, it is a shrug: an empty queue and a filter that matched nothing need
+        opposite responses, so <span class="mono">EmptyState</span> says which emptiness
+        this is. The skeleton rows are <span class="mono">--row-height</span> tall for the
+        same reason — the page must not reflow under the pointer when the real rows land.
+        The skeleton is <span class="mono">aria-hidden</span> and the container carries
+        <span class="mono">aria-busy</span> plus an <span class="mono">sr-only</span>
+        <span class="mono">role="status"</span>: a picture of content that does not exist
+        yet must not be announced as a table of blanks. And its pulse carries its own
+        <span class="mono">prefers-reduced-motion</span> rule, which is the one case the
+        global clamp does not cover — an INFINITE animation held at 0.01ms keeps looping
+        and strobes instead of stopping.
+      </p>
+    </div>
+    <div class="card edged" style="--edge:var(--e911-edge-teal); padding:0; overflow:hidden; margin-top:var(--e911-space-4)">
+      <div style="display:flex; align-items:center; gap:9px; padding:12px var(--e911-space-4); border-bottom:1px solid var(--border-default)">
+        <h3 style="font-family:var(--e911-font-display); font-size:var(--font-size-h3); letter-spacing:-.01em">Timecard — wider than the glass</h3>
+        <span class="tag info" style="margin-left:auto"><i></i>Tab to the table</span>
+      </div>
+      <div class="scroller" tabindex="0" role="region" aria-label="Timecard, scrollable">
+        <table>
+          <thead><tr><th>Telecommunicator</th><th>Date</th><th>In</th><th>Out</th><th>Regular</th><th>Overtime</th><th>Comp</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><b>M. Alvarez</b> · Shift B</td><td class="mono">2026-08-11</td><td class="mono">06:58</td><td class="mono">19:04</td><td class="mono">12.00</td><td class="mono">0.10</td><td class="mono">0.00</td><td><span class="tag ok"><i></i>Approved</span></td></tr>
+            <tr><td><b>D. Whitfield</b> · Shift A</td><td class="mono">2026-08-11</td><td class="mono">18:56</td><td class="mono">—</td><td class="mono">0.00</td><td class="mono">0.00</td><td class="mono">0.00</td><td><span class="tag warn"><i></i>Never punched out</span></td></tr>
+            <tr><td><b>R. Okonkwo</b> · Shift C</td><td class="mono">2026-08-12</td><td class="mono">22:58</td><td class="mono">07:02</td><td class="mono">8.00</td><td class="mono">0.07</td><td class="mono">0.00</td><td><span class="tag neutral"><i></i>Voluntary</span></td></tr>
+            <tr><td><b>K. Bledsoe</b> · Shift B</td><td class="mono">2026-08-12</td><td class="mono">06:55</td><td class="mono">15:03</td><td class="mono">8.00</td><td class="mono">0.00</td><td class="mono">1.50</td><td><span class="tag info"><i></i>Live estimate</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:var(--e911-space-4)">
+      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+        <span class="mono">DataTable</span> owns that scroller itself, and it is
+        <b>focusable and named</b>. A container that scrolls only by drag is a 2.1.1
+        failure: there is no keyboard gesture for "scroll the thing under the pointer"
+        when the thing under the pointer cannot take focus. Tab to the table above and
+        use the arrow keys. Do not wrap a <span class="mono">DataTable</span> in your own
+        <span class="mono">overflow-x-auto</span> — that nests a second scroller, and the
+        outer one, which is the one the pointer actually hits, is the unnamed
+        unfocusable kind this exists to stop shipping.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Motion <span>scoped by distance, not by importance</span></h2>
+    <div class="grid g2">
+      <div class="card mv">
+        <span class="lab" style="display:block; margin-bottom:4px">Hover this card</span>
+        <div>
+          <span class="mono" style="display:block; margin-bottom:4px">--e911-dur · 170ms</span>
+          <span class="mvbar base"></span>
+        </div>
+        <div>
+          <span class="mono" style="display:block; margin-bottom:4px">--e911-dur-slow · 240ms</span>
+          <span class="mvbar slow"></span>
+        </div>
+      </div>
+      <div class="card">
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch">
+          Until 1.7.0 the system had two durations, and the larger of them was carrying
+          both a chip's colour change and the rail's 64px → 224px width animation. Those
+          are not the same movement: <b>a colour swap reads as instant at 170ms, a 160px
+          layout shift reads as clipped.</b> 240ms is the top of the 150–250ms band
+          product UI can spend before an operator mid-task starts waiting for the
+          interface.
+        </p>
+        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+          Reach for it when something changes <b>size or position</b> — the rail opening,
+          a Dialog entering, a Select list unrolling. Everything else stays on
+          <span class="mono">--e911-dur</span>, and a press or a hover stays on
+          <span class="mono">--e911-dur-fast</span> (110ms). There is deliberately no
+          separate exit duration: nothing in the system currently animates out on a path
+          where the difference is visible, and a token with no consumer is how
+          <span class="mono">--font-size-h1</span> ended up describing a size only one
+          page renders.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
     <h2>Focus <span>two tones, one rule, every surface</span></h2>
     <div class="card">
       <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:12px">
@@ -430,6 +855,35 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <section class="sec">
+    <h2>Page header <span>eyebrow · ribbon-h1 · sub · the actions slot</span></h2>
+    <div class="ribbon e911-ribbon" style="margin-top:0">
+      <div class="eyeb">Approvals</div>
+      <h1>Pay Period 14</h1>
+      <p>2026-08-01 — 2026-08-14 · 34 timesheets · 6 awaiting a supervisor</p>
+      <div class="btns"><span class="meta">Synced 12s ago</span><button class="btn-g">Export</button><button class="btn-w">Approve all</button></div>
+    </div>
+    <div class="card" style="margin-top:var(--e911-space-4)">
+      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+        <b>The eyebrow is a deliberate exception, and this is the record of it.</b> An
+        external design review flagged it in 1.7.0 against a general rule that is usually
+        right — <i>a kicker above a heading is decoration, and a heading that needs one is
+        a heading that has not been written yet.</i> It is being kept. The shell's
+        navigation is a <span class="mono">--rail-width</span> (64px) icon rail with no
+        breadcrumb, collapsed by default, so <b>the eyebrow is the only element on the
+        page naming which of the six E911 domains the operator is standing in.</b> The
+        heading says "Pay Period 14"; the eyebrow says "Approvals". That is wayfinding,
+        and it is the wayfinding the general rule assumes a breadcrumb already provides.
+      </p>
+      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch; margin-top:12px">
+        It is kept <b>on a condition</b>, which is what makes it an exception rather than
+        an opinion: the eyebrow must carry what the collapsed rail cannot. An eyebrow
+        reading "APPROVALS" over a heading reading "Approvals" is the decoration the
+        review described — and at that point the general rule is right and it should go.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
     <h2>Composition <span>KPI row + watchlist table</span></h2>
     <div class="grid g4">
       <div class="card edged" style="--edge:var(--e911-edge-orange)"><span class="lab">Calls ≤ 15s</span><div class="kpi">94.6%</div><div class="sub"><span class="mini up">+1.2</span>NENA 90%</div></div>
@@ -455,7 +909,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <footer>
-    E911 Design System v1.6.0 · Locked 2026-08-14 · WCAG 2.1 AA enforced by npm run audit:contrast · Status is always pill + dot + word · Sample data only
+    E911 Design System v1.7.0 · Locked 2026-08-14 · WCAG 2.1 AA enforced by npm run audit:contrast · Status is always pill + dot + word · Sample data only
   </footer>
 </div>
 

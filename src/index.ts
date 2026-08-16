@@ -25,6 +25,15 @@ export type {
   RowLinkRenderer,
   FormFieldProps,
 } from "./data";
+// The two states a screen is in before it has anything to show. Neither
+// existed until 1.7.0, which is why every consuming screen either invented an
+// empty state or shipped a header row over a void, and why a table that was
+// still fetching looked exactly like a table with nothing in it. Unlike
+// everything else exported here, feedback.tsx carries no "use client" — a
+// server page can render an EmptyState without a client wrapper. See the note
+// at the top of that file.
+export { EmptyState, Skeleton } from "./feedback";
+export type { EmptyStateProps, SkeletonProps } from "./feedback";
 // The boolean controls. Self-labelling — the label is a CHILD and part of the
 // hit area, which is why they are not FormField children. See SKILL.md.
 export { Checkbox, Radio } from "./choice";

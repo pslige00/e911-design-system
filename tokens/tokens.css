@@ -13,6 +13,13 @@
    1.6.0 (2026-08-16): --check-size / --check-size-tap and --e911-radius-xs, the
    three metrics Checkbox and Radio need. Additive only — no existing value in
    this file moved, so every screen built against 1.5.0 renders identically.
+   1.7.0 (2026-08-16): the two tones the system never had (--status-info,
+   --status-neutral), the two states it left every component to invent for
+   itself (disabled, selected), the six browser surfaces it was still shipping
+   the browser's opinion of, a slow motion step, and the seven type sizes that
+   were living as text-[Npx] literals inside this package's own components.
+   Additive only, again: not one existing value in this file moved, so every
+   screen built against 1.6.0 renders identically.
 
    THE RULE: application code uses TIER 2 (semantic) names only.
    Tier 1 primitives exist so Tier 2 has something to point at.
@@ -79,10 +86,22 @@
   --e911-edge-plum:   #6D4FC4;
   --e911-edge-blue:   #2E5FAE;
 
-  /* status hues */
+  /* status hues.
+     Deliberately NOT the --e911-edge-* values, even where the hue is the same
+     name: an edge says which DOMAIN a card belongs to, a status says what state
+     a row is in, and one value serving both would make "blue" mean two things
+     on one screen. Compare --e911-green-700 #2F6B2E with --e911-edge-green
+     #2F7A34 — that gap is the convention, not a rounding error.
+
+     Blue added in 1.7.0 for --status-info. Positioned by ratio like every other
+     pair here: #2D5CA8 on #E5EDF8 measures 5.55:1, which puts it inside the
+     5.14–5.58 band the existing three already occupy, so a new tone reads as a
+     sibling rather than as the loudest thing on the board. */
   --e911-green-700: #2F6B2E;  --e911-green-100: #E7F2E3;
   --e911-gold-700:  #7E6000;  --e911-gold-100:  #F7EFD7;
   --e911-red-700:   #A63A22;  --e911-red-100:   #F9E7E1;
+  --e911-blue-700:  #2D5CA8;  --e911-blue-100:  #E5EDF8;
+  --e911-blue-300:  #7FB2E8;  /* dark-theme --status-info */
 
   /* type families */
   --e911-font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
@@ -108,10 +127,33 @@
   --e911-radius-lg: 14px;   /* ribbon, dialogs              */
   --e911-radius-pill: 999px;
 
-  /* motion */
+  /* motion.
+     --e911-dur-slow added in 1.7.0. Until then the system had two durations,
+     and the larger of them (170ms) was carrying both a chip's colour change and
+     the rail's 64px -> 224px width animation. Those are not the same movement:
+     a colour swap reads as instant at 170ms, a 160px layout shift reads as
+     clipped. 240ms is the top of the 150–250ms band that product UI can spend
+     before an operator in a task starts waiting for the interface.
+
+     Scoped BY DISTANCE, not by importance — reach for it when something changes
+     size or position, not when something merely changes colour. In practice
+     that is the rail, and at 1.7.0 it is ONLY the rail: an audit of the other
+     candidates found that Dialog does not animate its entrance at all (the
+     panel simply mounts; its one duration-fast is a hover tint on the close
+     button, which is colour and must stay fast), and Select's list likewise.
+     Naming those two here as consumers would have been a guess; they are
+     written down as checked-and-not-applicable instead, because a token with an
+     imaginary consumer list is how a reader concludes the token is already
+     wired up everywhere it should be. Everything else stays on --e911-dur.
+
+     There is deliberately no separate exit duration yet. Exits should generally
+     be faster than entrances, but nothing in this system currently animates out
+     on a path where the difference is visible, and a token with no consumer is
+     how --font-size-h1 ended up describing a size only one page renders. */
   --e911-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
   --e911-dur-fast: 110ms;
   --e911-dur: 170ms;
+  --e911-dur-slow: 240ms;
 }
 
 /* ---------------------------------------------------------------------------
@@ -263,13 +305,107 @@
   --ribbon-actions-scrim: rgba(33, 25, 19, 0.35);
   --ribbon-ghost-hover:   rgba(33, 25, 19, 0.30);
 
-  /* status — pill + dot + word, never color alone */
+  /* status — pill + dot + word, never color alone.
+
+     WHY THERE ARE FIVE OF THESE NOW, AND WHY THE WORD MATTERS MORE, NOT LESS.
+     The system shipped three tones until 1.7.0, and the argument for stopping
+     at three was a good one: a status with no tone is a status the reader has
+     to interpret. What that argument missed is what happens to the tone that
+     absorbs the leftovers. In the first consuming app, `warn` was used 84 times
+     across ~60 distinct labels, and only about 17 of them were cautionary. The
+     other two-thirds were neutral classification ("Note", "Net", "Moves money",
+     "Eligible", "Live estimate") and plain absence ("No timesheet", "Not
+     configured", "No roster for this date"). Gold was simultaneously the colour
+     for "this needs attention" and for "pay is not in question", which is a
+     more expensive ambiguity than an extra tone, on a wall tablet, at 3am.
+
+     So `info` and `neutral` exist to give the amber back its meaning, not to
+     let a status avoid having one. They are still pill + dot + WORD.
+
+     They have to be, because of the measurement that follows. Relative
+     luminance of all five light-theme tones:
+       ok #2F6B2E  L=0.1132     info    #2D5CA8  L=0.1104
+       warn #7E6000 L=0.1280    neutral #6C5C4B  L=0.1135
+       bad #A63A22  L=0.1125
+     A 0.018 spread across five tones. To a dichromat, and to anyone reading a
+     dim tablet across a room, these are five shades of the same grey. That is
+     not a defect in the palette — every one of them clears 4.5:1 on its own
+     fill, which is what AA asks. It is the reason the rule was written: colour
+     is the SECONDARY channel here and always was, and going from three tones to
+     five doubles down on the word rather than diluting it.
+
+     WHEN `neutral` IS LEGITIMATE. It is for a state that is real, known, and
+     carries no judgement — a classification the operator should read but need
+     not act on. It is NOT the tone for "I could not decide", and it is not a
+     way to avoid choosing. If the label would read the same with no pill at
+     all, the answer is no pill, not a neutral one. See SKILL.md. */
   --status-ok:        var(--e911-green-700);
   --status-ok-soft:   var(--e911-green-100);
   --status-warn:      var(--e911-gold-700);
   --status-warn-soft: var(--e911-gold-100);
   --status-bad:       var(--e911-red-700);
   --status-bad-soft:  var(--e911-red-100);
+  --status-info:      var(--e911-blue-700);   /* 5.55:1 on its soft fill */
+  --status-info-soft: var(--e911-blue-100);
+  /* Neutral is the one tone built from primitives that already existed: it is
+     the warm ramp, not a new hue, because a neutral state should recede toward
+     the page rather than introduce a sixth colour to a five-colour board. */
+  --status-neutral:      var(--e911-warm-600);  /* 5.51:1 on its soft fill */
+  --status-neutral-soft: var(--e911-warm-100);
+
+  /* DISABLED — the state every component was inventing for itself until 1.7.0.
+
+     There was no token, so Button, Select and DateField each chose their own
+     opacity or their own grey, and nothing compared them. That is the same
+     shape of drift that produced the 2.01:1 ribbon button label: two halves
+     free to desync, and no single place that would notice.
+
+     WCAG 1.4.3 exempts disabled controls from the contrast floor, so the audit
+     records these as kind:"disabled" and does not fail on them. That exemption
+     is permission to be quiet, not permission to be unreadable — a dispatcher
+     still has to read WHICH action is unavailable to know what to do instead.
+     Measured, and quoting the WORSE of the two grounds rather than the
+     flattering one, because this file has a documented history of doing the
+     opposite. --text-disabled on --surface-card is 3.38:1 light / 3.27:1 dark;
+     on its own --surface-disabled fill — which is where a disabled Button's
+     label actually sits — it is 2.90:1 light / 3.23:1 dark. Recessive, still
+     readable at arm's length, and below any floor it would owe if 1.4.3 did not
+     exempt it. If a later change makes disabled text quieter, 2.90 is the
+     number to argue against, not 3.38.
+
+     --border-disabled lands at 1.33–1.55 light and 1.44–1.46 dark, i.e. a
+     disabled control's boundary is very nearly invisible. Deliberate: the fill
+     and the label already say "unavailable", and a boundary held to 3:1 would
+     make the disabled control the highest-contrast object in the form. */
+  --surface-disabled: var(--e911-warm-100);
+  --text-disabled:    var(--e911-warm-500);
+  --border-disabled:  var(--e911-warm-300);
+
+  /* SELECTED — a row, option, or day the operator has picked. Distinct from
+     --surface-tint (which is hover, a transient pointer state) and from
+     --surface-brand-soft (which is the ACTIVE NAV DESTINATION, a statement
+     about where you are rather than about what you chose). Select's option list
+     and DateField's calendar were both using tint for all three, so hovering an
+     unselected option made it look chosen.
+
+     One step DARKER than --surface-tint rather than lighter: a choice the
+     operator made should outrank the pointer that happens to be resting
+     somewhere, so selected has to survive being hovered.
+
+     THE FILL IS NOT THE IDENTIFIER, AND MUST NOT BE. --surface-selected is
+     1.31:1 on card in light and 1.17:1 in dark — nowhere near the 3:1 that
+     1.4.11 asks of a boundary identifying a component state, and raising it to
+     3:1 would mean a mid-grey bar through a table that is meant to be read.
+     So the fill is emphasis and --border-selected carries the requirement:
+     it is --action-primary, which measures 3.53:1 light and 4.28:1 dark. Every
+     consumer must ALSO carry the state non-visually — aria-selected or
+     aria-current — and Select additionally keeps a check mark, font-weight and
+     --text-brand. Nobody may remove that check mark on the grounds that the
+     fill now exists; the fill is the weakest of the four signals, not the
+     strongest. Same reasoning as the card-border waiver above: separation
+     versus identification. */
+  --surface-selected: var(--e911-warm-200);
+  --border-selected:  var(--action-primary);
 
   /* elevation */
   --shadow-card: 0 1px 2px rgba(49, 38, 28, 0.05);
@@ -333,6 +469,76 @@
      consuming app, copied out of the component to match it. A size that three
      files agree on by eye is a token that has not been written down yet. */
   --font-size-ribbon-meta: 12.5px;
+
+  /* ------------------------------------------------------------------------
+     The seven sizes that were text-[Npx] literals inside this package (1.7.0).
+
+     App code has been forbidden from writing a raw size since 1.0.0, and the
+     consuming app enforces it with a test that reads its own source. This
+     package was doing it 27 times across 8 of its own components, at 9 sizes
+     that appear nowhere above — which meant a consumer could not name them,
+     could not override them, and could not be linted against them.
+
+     The principle was already written down here in 1.4.0, for --font-size-
+     ribbon-meta: "A size that three files agree on by eye is a token that has
+     not been written down yet." It was applied once and then stopped. 12.5px
+     went on to appear 7 more times; 13px 5 times; 12px 5 times.
+
+     Every FONT SIZE below is the size that already ships, to the pixel.
+
+     One honest caveat, because an earlier draft of this comment claimed "nothing
+     here changes a rendered pixel" and that was not true. A raw `text-[12.5px]`
+     sets font-size ONLY, so it inherited the body's line-height of 1.5. A named
+     token in either Tailwind port carries a line-height with it. So the ~27
+     replaced spots keep their exact type size and get slightly tighter leading —
+     most visibly on the Dialog description and the Toast message, both of which
+     wrap to two lines. That is a deliberate improvement (1.5 leading on a 10px
+     mono badge is wrong, and no one chose it — it was inherited by accident),
+     but it IS a visual change and saying otherwise would be the same species of
+     drift this file's header apologises for.
+
+     What is genuinely deferred: whether 10.5 and 11, or 12.5 and 12.8, should
+     collapse into one step. That is a real resize, it changes layout, and it
+     does not belong in the same commit as a naming pass.
+     ---------------------------------------------------------------------- */
+
+  /* Caps micro-label: the ribbon eyebrow and the DataTable column header.
+     Note for anyone reconciling this against SKILL.md, which said "11px caps"
+     for both from 1.0.0 until 1.7.0: the document was wrong and the code was
+     right. scripts/contrast-audit.mjs has scored both at px:10.5 the whole
+     time, so the instrument knew even while the prose did not. */
+  --font-size-micro: 10.5px;
+  /* Mono badge: CertChip, the KpiCard delta pill. */
+  --font-size-badge: 10px;
+  /* The status pill's word. 11px like --font-size-label, and deliberately NOT
+     that token: `label` is the caps micro-label and carries +0.05em tracking,
+     which on a StatusTag would space out a word that is already short and set
+     in a 21px pill. Same size, different job — and this is the ninth size the
+     note above counts, found by a consumer who correctly refused to substitute
+     `label` for it rather than moving a pixel to make a token fit. */
+  --font-size-tag: 11px;
+  /* Supporting line under a value: KpiCard sub-line, FormField hint and error. */
+  --font-size-meta: 11.5px;
+  /* Small UI text: Chip size="sm", Tooltip, a Toast action, a calendar day. */
+  --font-size-ui-sm: 12px;
+  /* The value inside a form control: DateField input, Select trigger and its
+     options, the Checkbox/Radio label. Distinct from --font-size-body (13.5px)
+     because a control's text is set one step down from prose on purpose. */
+  --font-size-control: 13px;
+  /* The ribbon's own headline.
+     NOT the same as --font-size-h1 (20px), and this is the one place where two
+     tokens genuinely deserve to exist for one HTML element. The ribbon is a
+     painted band with its own gradient and its own scrim, and its title is
+     sized against that band; --font-size-h1 is for a page that has no ribbon at
+     all — the sign-in page and the kiosk, which is exactly where its single
+     consumer lives. Before 1.7.0 the ribbon simply hard-coded 24px, so the
+     system's stated "h1 size" was a size that 95% of its h1s did not use. */
+  --font-size-ribbon-h1: 24px;
+  /* The seal's "911" lockup. Its own token because it is the one piece of type
+     in the system that is exempt from the contrast floor (1.4.3, logotype) and
+     the one size nothing else may reach for. Scoped by name so that exemption
+     cannot spread. */
+  --font-size-seal: 9px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -410,6 +616,23 @@
   --status-ok:   #5BC46F;  --status-ok-soft:   rgba(91, 196, 111, 0.14);
   --status-warn: #E7B93C;  --status-warn-soft: rgba(231, 185, 60, 0.14);
   --status-bad:  #F26D5F;  --status-bad-soft:  rgba(242, 109, 95, 0.15);
+  /* 6.15:1 over its own fill flattened on --surface-card. Same 0.14 alpha as
+     the other three, so the five soft fills sit at one weight. */
+  --status-info: var(--e911-blue-300);     --status-info-soft: rgba(127, 178, 232, 0.14);
+  /* Warm ramp again, mirroring light: neutral recedes toward the page. 5.84:1. */
+  --status-neutral: var(--e911-warm-400);  --status-neutral-soft: rgba(182, 167, 148, 0.14);
+
+  /* See the light block for why these two tiers exist. warm-550 for disabled
+     text rather than warm-600: it measures 3.27:1 on card here against light's
+     3.38:1, so "unavailable" recedes by the same amount in both themes instead
+     of disappearing in the dark one. */
+  --surface-disabled: var(--e911-warm-950);
+  --text-disabled:    var(--e911-warm-550);   /* 3.27:1 on card */
+  --border-disabled:  var(--e911-warm-800);
+  /* One step LIGHTER than --surface-tint here — the same "selected outranks
+     hover" rule as light, pointing the other way because the ground inverted. */
+  --surface-selected: #2E251E;
+  --border-selected:  var(--action-primary);
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-pop:  0 12px 34px -14px rgba(0, 0, 0, 0.8);
@@ -425,6 +648,62 @@
   font-size: var(--font-size-body);
   letter-spacing: -0.004em;
   line-height: 1.5;
+
+  /* THE SURFACES NOBODY DREW (1.7.0).
+
+     Six things on every screen in this system were still the browser's, not
+     ours: the selection highlight, the caret, the placeholder, the scrollbar,
+     the list marker, and the underline offset on a link. They ship with
+     defaults that belong to no design system — and specifically, in Chrome,
+     with a cobalt selection band and a cool grey scrollbar, on a palette that
+     contains no cool hue at all. Every value below already existed as a token;
+     this block spends no new colour.
+
+     Not a cosmetic pass. A dispatcher selecting a badge number to paste into
+     the CAD gets a #3477F5 band across a warm-neutral table, which is the one
+     moment the app looks like an unstyled form. And --border-control was raised
+     to 3:1 in 1.5.0 precisely because "an empty field on a wall tablet at arm's
+     length was invisible" — a placeholder at the browser's #9AA0A6 undoes half
+     of that on the same field.
+
+     scrollbar-color is the STANDARD two-value property on purpose. The
+     ::-webkit-scrollbar family can redraw a scrollbar completely, and a
+     redrawn scrollbar is a reinvented standard affordance: it loses the
+     platform's overlay behaviour, its touch expansion, and on a wall tablet its
+     hit area. Tinting the thumb and track is theming; redrawing the widget is a
+     different control. */
+  caret-color: var(--action-primary);
+  scrollbar-color: var(--border-strong) transparent;
+}
+/* Not on .e911-app itself: ::selection does not inherit through the shorthand
+   the way a colour does, and a rule scoped to the root alone leaves every
+   descendant on the UA default. The descendant selector is what makes it
+   actually apply to the table cell you dragged across.
+
+   The pair is --action-primary / --text-on-action, which is not a new choice:
+   it is the same pair the audit already scores as "Primary button label"
+   (4.6:1 light, and the dark theme inverts the label rather than the fill for
+   the same reason it does on the button). A selection band is a fill with text
+   on it; it owes what any other fill owes. */
+.e911-app ::selection {
+  background: var(--action-primary);
+  color: var(--text-on-action);
+}
+.e911-app ::placeholder {
+  color: var(--text-tertiary);
+  opacity: 1; /* Firefox ships ::placeholder at opacity 0.54, which would take
+                 --text-tertiary from its audited 4.98:1 to roughly 2.6:1 — a
+                 tier that was raised in 1.2.0 specifically to clear 4.5:1,
+                 silently undone by a UA default in one browser. */
+}
+.e911-app ::marker { color: var(--text-tertiary); }
+/* A link's underline sits on the baseline by default and cuts every descender.
+   Both values are what the browser should have picked; neither is a design
+   flourish, and `from-font` is deliberately not used — Onest reports a
+   thickness that renders lighter than the row rules beside it. */
+.e911-app a {
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
 }
 /* THE FOCUS INDICATOR. Two tones, drawn in one place for every control in the
    system, because a per-component ring is how one variant ends up unringed.

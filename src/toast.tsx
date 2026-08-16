@@ -123,7 +123,13 @@ function ToastCard({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
   return (
     <div
       // `bad` is an interruption — a failed dispatch write can't wait for the
-      // screen reader to finish the current phrase. ok/warn are polite.
+      // screen reader to finish the current phrase. Every other tone is polite,
+      // and the test is deliberately `=== "bad"` rather than a per-tone map:
+      // `Tone` widened to five in 1.7.0, and a map would have been the thing
+      // that needed editing (or, more likely, didn't) when `info` and `neutral`
+      // arrived. Written this way, a sixth tone announces politely by default —
+      // the safe end of the choice. An assertive live region on a routine
+      // "Saved" cuts off whatever the operator was already being read.
       role={record.tone === "bad" ? "alert" : "status"}
       aria-atomic="true"
       onPointerEnter={() => setPaused(true)}
@@ -138,7 +144,7 @@ function ToastCard({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <StatusTag tone={record.tone}>{record.word}</StatusTag>
-          <p className="mt-1.5 text-[12.5px] text-ink">{record.message}</p>
+          <p className="mt-1.5 text-ribbon-meta text-ink">{record.message}</p>
           {record.action ? (
             <button
               type="button"
@@ -148,7 +154,7 @@ function ToastCard({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
               }}
               className={cn(
                 "relative mt-2 h-ctl-sm rounded-sm border-chip border-line bg-card px-2.5",
-                "text-[12px] font-semibold text-ink transition duration-fast ease-e911 hover:bg-tint",
+                "text-ui-sm font-semibold text-ink transition duration-fast ease-e911 hover:bg-tint",
                 // 28px painted, 44px reachable — nothing sits directly above or
                 // below it inside the toast, so the overhang is free.
                 "before:absolute before:inset-x-0 before:-inset-y-2 before:content-['']"

@@ -14,7 +14,43 @@
  */
 
 /* ------------------------------------------------------------------ types */
-export type Tone = "ok" | "warn" | "bad";
+/**
+ * What a status MEANS. Widened from three to five in 1.7.0.
+ *
+ * The three-tone version was a deliberate constraint, and the argument for it
+ * was sound: a status with no tone is a status the reader has to interpret. Two
+ * tones were added anyway, because of what the constraint did to the tone that
+ * absorbed everything it could not classify.
+ *
+ * Measured in the first consuming app before this change: `warn` was used 84
+ * times across ~60 distinct labels, and roughly 17 of them were cautionary. The
+ * rest were neutral classification ("Note", "Net", "Moves money", "Eligible")
+ * and plain absence ("No timesheet", "Not configured", "No roster for this
+ * date"). Gold meant "this needs attention" and "pay is not in question" on the
+ * same screen. That ambiguity costs more, on a wall tablet at 3am, than a wider
+ * union does.
+ *
+ * - `ok`      — the good, settled state. Nothing to do.
+ * - `warn`    — caution. Something the operator should look at.
+ * - `bad`     — failure, refusal, or a hard block.
+ * - `info`    — a real fact worth reading that carries no judgement and needs
+ *               no action. Classification, provenance, "this is an estimate".
+ * - `neutral` — a known state with no valence at all, including absence.
+ *
+ * `neutral` is NOT an escape hatch, and this is the rule that keeps it from
+ * becoming one: if the label would read exactly the same with no pill around
+ * it, the answer is no pill, not a neutral one. A tone is a claim that the
+ * state matters enough to mark. See SKILL.md.
+ *
+ * Every tone is still pill + dot + WORD, and that rule got MORE load-bearing
+ * here, not less. All five light-theme tones sit between L=0.110 and L=0.128 —
+ * a 0.018 luminance spread across the whole set. Each clears 4.5:1 on its own
+ * fill, which is what AA asks for, but to a dichromat, or to anyone reading a
+ * dim tablet from across the room, they are five shades of one grey. Colour was
+ * always the secondary channel in this system; five tones simply makes that
+ * arithmetic impossible to ignore.
+ */
+export type Tone = "ok" | "warn" | "bad" | "info" | "neutral";
 export type EdgeColor = "orange" | "teal" | "gold" | "green" | "plum" | "blue";
 
 /**

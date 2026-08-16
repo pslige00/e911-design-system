@@ -30,6 +30,22 @@ const TOKENS = resolvePath(here, "../tokens/tokens.css");
  * Pull custom-property declarations out of the selector blocks we care about.
  * Deliberately dumb: tokens.css is a flat file of `--name: value;` lines with no
  * nesting, and a real CSS parser would be a dependency this package does not have.
+ *
+ * WHAT IT CANNOT SEE, because this bit once in 1.7.0. It reads DECLARATIONS, not
+ * CSS: it strips the first comment it finds and reads on, so a comment that
+ * closes EARLY — prose running past its own terminator — is invisible here and
+ * fatal in a browser. That shipped briefly in 1.7.0. The SELECTED block's
+ * comment closed mid-sentence, the orphaned prose ran on into the declaration
+ * beneath it, and a real parser dropped `--surface-selected` under CSS error
+ * recovery while this script resolved it and printed PASS.
+ *
+ * So a green row is evidence that a VALUE clears its threshold. It is not
+ * evidence that the declaration survives being parsed. `commentAnomalies` below
+ * closes the two shapes that are known to break this — it runs on tokens.css
+ * before anything is measured, and `selfTest` proves it still catches both —
+ * but the general claim stands: a regex reading source will eventually read
+ * something other than the source. Confirming a screen still renders is `/_ds`
+ * in a real browser, and no script here replaces it.
  */
 function readBlocks(css) {
   const light = new Map(); // :root and :root, [data-theme="light"]
@@ -54,20 +70,208 @@ function readBlocks(css) {
   return { light, dark };
 }
 
+/**
+ * The shapes the regexes above cannot survive, found in one left-to-right pass
+ * over three states. This is NOT a CSS parser and must not grow into one — it
+ * decides nothing about the file's meaning. It answers one question: is this
+ * file the kind of text a regex stripper reads correctly? Two answers are no.
+ *
+ *   · a terminator with no opener — a comment that closed early, leaving its
+ *     remaining prose as code. The stripper removes the opener-to-first-
+ *     terminator span and reads the leftover prose as declarations. A browser
+ *     instead swallows everything to the next semicolon, which takes the
+ *     declaration BELOW the prose with it. Shipped in 1.7.0: --surface-selected
+ *     was undefined in every browser and green in every row of this table.
+ *   · an opener inside a string — the same failure from the other side, and the
+ *     one that hit the consuming app's design-system test an hour later. A glob
+ *     in a string value ("src/app/(app)/admin/**") opens a comment the author
+ *     never wrote, and everything to the next terminator stops being read. That
+ *     one deleted an entire export, and every rule in the file went on reporting
+ *     green across the window where it could no longer see anything.
+ *
+ * Anything found here stops the run, because the alternative is a table
+ * measured against a file nobody has actually read.
+ */
+function commentAnomalies(source) {
+  const found = [];
+  let state = "code"; // code | comment | string
+  let quote = "";
+  let line = 1;
+  let i = 0;
+  while (i < source.length) {
+    const c = source[i];
+    const next = source[i + 1];
+    if (c === "\n") line++;
+    if (state === "comment") {
+      if (c === "*" && next === "/") {
+        state = "code";
+        i += 2;
+        continue;
+      }
+    } else if (state === "string") {
+      if (c === "\\") {
+        i += 2;
+        continue;
+      }
+      if (c === quote) {
+        state = "code";
+        i++;
+        continue;
+      }
+      if (c === "/" && next === "*") found.push({ line, kind: "opener inside a string" });
+    } else {
+      if (c === "/" && next === "*") {
+        state = "comment";
+        i += 2;
+        continue;
+      }
+      if (c === "*" && next === "/") {
+        found.push({ line, kind: "terminator with no opener" });
+        i += 2;
+        continue;
+      }
+      if (c === '"' || c === "'") {
+        quote = c;
+        state = "string";
+      }
+    }
+    i++;
+  }
+  if (state === "comment") found.push({ line, kind: "unterminated comment" });
+  if (state === "string") found.push({ line, kind: "unterminated string" });
+  return found;
+}
+
+/**
+ * PROVE THE INSTRUMENT CAN FAIL BEFORE TRUSTING IT TO SAY SOMETHING PASSED.
+ *
+ * This file's header explains that a person reading ratios off a stale comment
+ * was not a control. A script that has never been shown to fail is the same
+ * thing one layer down: "0 failing" is equally consistent with a working audit
+ * and with a scorer that lost the ability to say no. Until 1.7.0 nothing here
+ * distinguished those two, and the parser had ALREADY silently scored a token
+ * the browser never defined.
+ *
+ * Runs before every audit rather than behind a flag, because insurance nobody
+ * remembers to buy is not insurance. `--self-test` runs it alone.
+ */
+function selfTest() {
+  const problems = [];
+  let ran = 0;
+  const check = (what, ok, detail) => {
+    ran++;
+    if (!ok) problems.push(`${what} — ${detail}`);
+  };
+
+  // Synthetic tokens, scored through the same scorePair the table uses.
+  const scopes = readBlocks(
+    ":root{--surface-card:#FFFFFF;--st-quiet:#9A9A9A;--st-ink:#595959;--st-fill:#FFFFFF;}"
+  );
+
+  // 1. A red build is reachable at all.
+  const failing = scorePair("--st-quiet", "--st-fill", 4.5, "light", scopes);
+  check(
+    "a pair below threshold fails",
+    failing.pass === false,
+    `#9A9A9A on #FFFFFF scored ${failing.ratio.toFixed(2)} and was accepted`
+  );
+  // 2. ...and the scorer is not simply stuck on "no", which would make (1) meaningless.
+  const passing = scorePair("--st-ink", "--st-fill", 4.5, "light", scopes);
+  check(
+    "a pair above threshold passes",
+    passing.pass === true,
+    `#595959 on #FFFFFF scored ${passing.ratio.toFixed(2)} and was rejected`
+  );
+
+  // 3. A token that is not declared must stop the run, not resolve to something.
+  //    This is the --surface-selected case from the other side: if the parser
+  //    ever loses a declaration the way a browser did, the run has to say so.
+  let threw = false;
+  try {
+    resolveToken("--st-never-declared", "light", scopes);
+  } catch {
+    threw = true;
+  }
+  check("an undeclared token throws", threw, "resolveToken invented a value for a token that does not exist");
+
+  // 4. The 1.7.0 bug, in the shape it actually had.
+  const orphaned = ":root{\n  /* a comment that closes here. */\n  prose that ran on */\n  --st-orphan: #123456;\n}";
+  check(
+    "an orphaned declaration is caught",
+    commentAnomalies(orphaned).some((a) => a.kind === "terminator with no opener"),
+    "the shape that left --surface-selected undefined in a browser passed unnoticed"
+  );
+
+  // 5. The consuming app's bug, in the shape it actually had.
+  const glob = ':root{\n  --st-glob: "requireRole(admin) — src/app/(app)/admin/**";\n}';
+  check(
+    "a comment opener inside a value is caught",
+    commentAnomalies(glob).some((a) => a.kind === "opener inside a string"),
+    "a glob in a value would open a comment and blank whatever followed it"
+  );
+
+  // 6. And it does not cry wolf on the prose this file is mostly made of —
+  //    comments quoting values, apostrophes, asterisks, trailing annotations.
+  //    A shape check that flags tokens.css as written is a shape check someone
+  //    will delete within the week.
+  const legitimate =
+    ':root{\n  /* "labels >=12px semibold only" — an apostrophe\'s worth of prose,\n     a * on its own, and a value quoted below. */\n  --st-font: "Space Grotesk", system-ui;  /* trailing note */\n}';
+  const criedWolf = commentAnomalies(legitimate);
+  check(
+    "legitimate comment prose is not flagged",
+    criedWolf.length === 0,
+    `flagged ${criedWolf.map((a) => a.kind).join(", ")}`
+  );
+
+  return { ran, problems };
+}
+
+/* ------------------------------------------------------------------- read */
+
+const selfTestResult = selfTest();
+if (selfTestResult.problems.length > 0) {
+  console.error("Instrument self-test FAILED — this script cannot be trusted to audit anything:");
+  for (const p of selfTestResult.problems) console.error(`  · ${p}`);
+  process.exit(1);
+}
+if (process.argv.includes("--self-test")) {
+  console.log(`Instrument self-test: ${selfTestResult.ran} checks passed.`);
+  process.exit(0);
+}
+
 const css = readFileSync(TOKENS, "utf8");
+
+// The file has to be a shape the stripper reads correctly before any ratio off
+// it means anything. Asserting the two bad shapes are ABSENT is deliberately
+// cheaper than parsing around them: it cannot be fooled, and it fails loudly the
+// day someone reintroduces one instead of quietly reopening the hole.
+const shapes = commentAnomalies(css);
+if (shapes.length > 0) {
+  console.error("tokens.css contains a shape this script reads incorrectly:");
+  for (const s of shapes) console.error(`  · line ${s.line}: ${s.kind}`);
+  console.error(
+    "\nEvery row below would be measured against whatever the regex stripper made\n" +
+      "of the file, which is not what a browser parses. Fix tokens.css."
+  );
+  process.exit(1);
+}
+
 const { light, dark } = readBlocks(css);
 
-/** Resolve a token name (or raw value) to a literal, following var() chains. */
-function resolveToken(name, theme) {
-  const scope = theme === "dark" ? dark : light;
+/** Resolve a token name (or raw value) to a literal, following var() chains.
+    `scopes` exists so the self-test can drive this with synthetic tokens; the
+    audit itself never passes it and reads the real file's two maps. */
+function resolveToken(name, theme, scopes) {
+  const { light: lightScope, dark: darkScope } = scopes ?? { light, dark };
+  const scope = theme === "dark" ? darkScope : lightScope;
   const seen = new Set();
-  let value = scope.get(name) ?? light.get(name);
+  let value = scope.get(name) ?? lightScope.get(name);
   while (value != null) {
     const ref = /^var\(\s*(--[\w-]+)\s*\)$/.exec(value.trim());
     if (!ref) return value.trim();
     if (seen.has(ref[1])) throw new Error(`circular var chain at ${ref[1]}`);
     seen.add(ref[1]);
-    value = scope.get(ref[1]) ?? light.get(ref[1]);
+    value = scope.get(ref[1]) ?? lightScope.get(ref[1]);
   }
   throw new Error(`unresolved token ${name} (${theme})`);
 }
@@ -229,16 +433,45 @@ function thresholdFor({ px, weight, kind }) {
 }
 
 /**
+ * Score one foreground on one ground, the way a screen paints it: the ground
+ * composited onto the card (dark's --surface-brand-soft and every soft status
+ * fill are rgba, and scoring those against their own unpainted alpha reads far
+ * too optimistic), then the ink composited onto that.
+ *
+ * The run loop and the self-test both go through here, and that is the point:
+ * if the self-test carried its own copy of this arithmetic it would prove that
+ * the copy works, which is not the question anyone is asking.
+ */
+function scorePair(fgName, bgName, need, theme, scopes) {
+  const fgRaw = fgName.startsWith("--") ? resolveToken(fgName, theme, scopes) : fgName;
+  const bgRaw = bgName.startsWith("--") ? resolveToken(bgName, theme, scopes) : bgName;
+  const canvas = parseColor(resolveToken("--surface-card", theme, scopes));
+  const bg = over(parseColor(bgRaw), canvas);
+  const fg = over(parseColor(fgRaw), bg);
+  const ratio = contrast(fg, bg);
+  return { fg, bg, ratio, pass: need === 0 ? null : ratio + 1e-9 >= need };
+}
+
+/**
  * Known-open items: measured, below threshold, and deliberately NOT changed in
  * this pass. Each records the ratio it had when it was waived, and the audit
  * fails if the real ratio drops below that — so a waiver freezes a problem in
  * place instead of licensing it to get worse. It also fails if the pair starts
  * passing, which is the prompt to delete the entry.
  *
+ * That paragraph described the stale-waiver check, which was real, and a ratio
+ * freeze, which until 1.7.0 was not: the entries were bare strings, no floor was
+ * ever compared, and a waived border could have drifted to 1.05:1 in silence
+ * under a comment promising it could not. `at` is that promise implemented. It
+ * is keyed by `theme + ground` rather than by role because a role can be scored
+ * on several grounds and they degrade independently — and a waived role scored
+ * on a ground with no frozen number fails outright, so an exemption cannot
+ * quietly widen to a surface nobody measured it on.
+ *
  * Waiving is only honest with a reason that survives being read aloud. These
- * are all SC 1.4.11 (non-text contrast) on borders, and 1.4.11 applies to
- * boundaries REQUIRED to identify a control — it exempts a boundary when the
- * component is identifiable another way. Judged individually:
+ * are all SC 1.4.11 (non-text contrast), and 1.4.11 applies to what is REQUIRED
+ * to identify a control or its state — it exempts a visual when the thing is
+ * identifiable another way. Judged individually:
  */
 const WAIVED = {
   // Cards and row rules are separation, not identification: a DomainCard is
@@ -252,11 +485,43 @@ const WAIVED = {
   // of that sentence is false and the border was carrying it. They stay waived
   // because 3:1 here means a ~#6E6055 rule on #1E1814, which turns a 350-row
   // table into a spreadsheet grid — a different design, not a fixed one.
-  "Card border": "separation, not identification; lifted in 1.4.0, 3:1 would be a grid",
-  "Row rule": "separation, not identification; lifted in 1.4.0, 3:1 would be a grid",
+  "Card border": {
+    why: "separation, not identification; lifted in 1.4.0, 3:1 would be a grid",
+    at: { "light --surface-canvas": 1.21, "dark --surface-canvas": 2.04 },
+  },
+  "Row rule": {
+    why: "separation, not identification; lifted in 1.4.0, 3:1 would be a grid",
+    at: { "light --surface-card": 1.17, "dark --surface-card": 1.46 },
+  },
   // The secondary button has a visible label and a 3:1 hover/focus state, so
   // its resting stroke is not the sole identifier.
-  "Secondary button border": "labelled control; focus ring and hover carry the state",
+  "Secondary button border": {
+    why: "labelled control; focus ring and hover carry the state",
+    at: { "light --surface-card": 1.55, "dark --surface-card": 2.67 },
+  },
+  // Added in 1.7.0, and the only entry here that was waived AFTER the audit
+  // reported it rather than before. --surface-selected is emphasis, not the
+  // identifier: 3:1 against both the unselected row and the hover it must
+  // outrank would mean a mid-grey bar through a table meant to be read.
+  //
+  // What makes that honest rather than convenient is that the carriers are
+  // scored and gating, one per consumer: DateField draws --border-selected
+  // (3.53:1 light, 4.28:1 dark on this fill) and Select draws a --text-brand
+  // check mark (4.88:1, 7.48:1). Both are rows below, neither is waived. The
+  // frozen numbers include the 1.12:1 and 1.06:1 against --surface-tint, which
+  // are the ones worth re-reading: selected and hovered are ONE ramp step apart,
+  // so the fill is not distinguishable from the pointer state it outranks — it
+  // is the weakest of the four signals, and nothing may be dropped on the
+  // grounds that it exists.
+  "Selected row fill": {
+    why: "emphasis, not identification; 1.4.11 exempts a state carried another way, and both carriers are scored and gating below (DateField border 3.53/4.28, Select check mark 4.88/7.48)",
+    at: {
+      "light --surface-card": 1.31,
+      "light --surface-tint": 1.12,
+      "dark --surface-card": 1.17,
+      "dark --surface-tint": 1.06,
+    },
+  },
   //
   // "Input border" was the fourth entry here from 1.1.2 to 1.4.0, and it was
   // the honest one: an input is `bg-card` inside a card that is ALSO `bg-card`,
@@ -312,7 +577,11 @@ const PAIRS = [
   { role: "Pagination ellipsis", where: "Pagination", fg: "--text-tertiary", bg: ["--surface-canvas", "--surface-card"], px: 12.5, weight: 400 },
   { role: "Dismiss icon", where: "Dialog / Toast", fg: "--text-tertiary", bg: ["--surface-card"], kind: "ui" },
   { role: "Select chevron", where: "Select", fg: "--text-tertiary", bg: ["--surface-card"], kind: "ui" },
-  { role: "Calendar disabled day", where: "DateField", fg: "--text-tertiary", bg: ["--surface-card"], kind: "disabled" },
+  // Moved off --text-tertiary in 1.7.0, when the disabled tier stopped being
+  // each component's private opinion: date-field.tsx paints text-disabled-fg.
+  // The row kept the old token for a version and measured a colour the calendar
+  // no longer used — a mirror of the same drift one tier up.
+  { role: "Calendar disabled day", where: "DateField", fg: "--text-disabled", bg: ["--surface-card"], kind: "disabled" },
 
   // ---- brand / action ---------------------------------------------------
   { role: "Brand text link", where: "Chip active / Tabs active", fg: "--text-brand", bg: ["--surface-card", "--surface-brand-soft"], px: 12, weight: 600 },
@@ -336,9 +605,71 @@ const PAIRS = [
   { role: "StatusTag ok", where: "StatusTag", fg: "--status-ok", bg: ["--status-ok-soft"], px: 11, weight: 600 },
   { role: "StatusTag warn", where: "StatusTag", fg: "--status-warn", bg: ["--status-warn-soft"], px: 11, weight: 600 },
   { role: "StatusTag bad", where: "StatusTag", fg: "--status-bad", bg: ["--status-bad-soft"], px: 11, weight: 600 },
+  // The two tones added in 1.7.0, on their own soft fill and at the 11px/600 the
+  // pill actually paints. They are here on the first day precisely because the
+  // three above them were not: an unmeasured tone is what `--text-tertiary` was
+  // for two versions, and a fifth colour on the board is a fifth chance of it.
+  { role: "StatusTag info", where: "StatusTag", fg: "--status-info", bg: ["--status-info-soft"], px: 11, weight: 600 },
+  { role: "StatusTag neutral", where: "StatusTag", fg: "--status-neutral", bg: ["--status-neutral-soft"], px: 11, weight: 600 },
   { role: "CertChip warn", where: "CertChip", fg: "--status-warn", bg: ["--status-warn-soft"], px: 10, weight: 400 },
   { role: "CertChip bad", where: "CertChip", fg: "--status-bad", bg: ["--status-bad-soft"], px: 10, weight: 400 },
   { role: "Field error text", where: "FormField error", fg: "--status-bad", bg: ["--surface-card"], px: 11.5, weight: 500 },
+
+  // ---- states (1.7.0) ---------------------------------------------------
+  // DISABLED is exempt under 1.4.3, so these two rows RECORD rather than gate —
+  // and the exemption is exactly why they have to exist. Until 1.7.0 Button,
+  // Select and DateField each owned a private opinion of "grey", nothing
+  // compared them, and nothing would have said so if one of them went to 1.5:1.
+  // Both grounds are scored because a disabled control sits on its own
+  // --surface-disabled fill AND, unfilled, on the card behind it (a disabled
+  // checkbox label, a calendar day).
+  { role: "Disabled label", where: "Button / Select / DateField :disabled", fg: "--text-disabled", bg: ["--surface-disabled", "--surface-card"], kind: "disabled" },
+  { role: "Disabled border", where: ":disabled boundary", fg: "--border-disabled", bg: ["--surface-disabled", "--surface-card"], kind: "disabled" },
+  // SELECTED is a STATE, so 1.4.11 asks 3:1 of whatever CONVEYS it — which is
+  // not the same as asking it of every layer that moves. The fill is scored
+  // against the row that is NOT selected (--surface-card) and against the row
+  // the pointer is resting on (--surface-tint), and it misses both; it is
+  // waived above as emphasis, with those numbers frozen.
+  //
+  // The three rows after it are the ones that gate, and they are split BY
+  // CONSUMER because the two consumers carry the state differently: DateField
+  // draws a border, Select draws a check mark and re-colours the label. Scoring
+  // one and assuming the other is how the fill came to look sufficient.
+  //
+  // What no row here can check: that a consumer paints a carrier AT ALL. This
+  // file scores tokens, not components — a third component that shipped the
+  // fill alone would measure clean and be wrong on screen.
+  { role: "Selected row fill", where: "Select option / DateField day", fg: "--surface-selected", bg: ["--surface-card", "--surface-tint"], kind: "ui" },
+  // DateField's carrier. Scored against its own fill as well as the card,
+  // because on the chosen day the border's ground is the selection — and on an
+  // out-of-range day that is still the value (the 1.5.0 path) the fill is
+  // withheld and the ground is the card.
+  { role: "Selected day border", where: "DateField day[aria-selected]", fg: "--border-selected", bg: ["--surface-selected", "--surface-card"], kind: "ui" },
+  // Select's carrier, both halves of it. The label and the mark are the same
+  // pair of tokens on the same ground and differ only in what WCAG asks of
+  // them: the label is 13px text and owes 4.5:1, the mark is a graphical object
+  // and owes 3:1. Scored as two rows so that a future change which is legal for
+  // a mark and illegal for a word cannot pass by being measured as a mark.
+  { role: "Selected option label", where: "Select option[aria-selected]", fg: "--text-brand", bg: ["--surface-selected"], px: 13, weight: 600 },
+  { role: "Selected option mark", where: "Select option check", fg: "--text-brand", bg: ["--surface-selected"], kind: "ui" },
+
+  // ---- browser surfaces (1.7.0) -----------------------------------------
+  // The .e911-app base block took six defaults back off the browser. Two of them
+  // put text on a fill and had therefore never been scored by anything at all —
+  // they were the UA's numbers, not this system's, and a UA default is the one
+  // value no audit here was reading. The other four reuse tokens already scored
+  // above: caret-color is --action-primary (see "Active tab underline"),
+  // ::marker is this same --text-tertiary on card, and the scrollbar thumb is
+  // --border-strong on the canvas.
+  //
+  // ::selection is the primary button's pair, which is why the block spends no
+  // new colour — but it is scored at BODY size, not the button's 13.5/600,
+  // because a drag selects prose and table cells, not labels.
+  { role: "::selection", where: ".e911-app ::selection", fg: "--text-on-action", bg: ["--action-primary"], px: 13.5, weight: 400 },
+  // Scored at --font-size-control, the size of the field it sits in. tokens.css
+  // forces opacity:1 here; at Firefox's default 0.54 this pair lands near 2.6:1,
+  // which is the tier's 1.2.0 fix silently undone by a UA stylesheet.
+  { role: "::placeholder", where: ".e911-app ::placeholder", fg: "--text-tertiary", bg: ["--surface-card"], px: 13, weight: 400 },
 
   // ---- boolean controls (1.6.0) -----------------------------------------
   // A Checkbox or Radio is the one control in this system whose whole meaning
@@ -428,10 +759,25 @@ const staleWaivers = new Set(Object.keys(WAIVED));
 function record(row) {
   const waiver = WAIVED[row.role];
   if (row.pass === false && waiver) {
-    row.result = "WAIVED";
-    row.note = waiver;
-    waivedSeen++;
-    staleWaivers.delete(row.role);
+    // The frozen ratio, per ground. Missing means this role has never been
+    // measured on this surface, and inheriting an exemption is how a waiver
+    // written for one border ends up covering a second one nobody looked at.
+    const frozen = waiver.at[`${row.theme} ${row.bgName}`];
+    // 0.005 is display noise at two decimals, not a tolerance for drift.
+    if (frozen == null || row.ratio < frozen - 0.005) {
+      row.result = "FAIL";
+      row.note =
+        frozen == null
+          ? "waived role, but no frozen ratio for this ground"
+          : `waived at ${frozen.toFixed(2)}, now ${row.ratio.toFixed(2)}`;
+      failures++;
+      staleWaivers.delete(row.role);
+    } else {
+      row.result = "WAIVED";
+      row.note = waiver.why;
+      waivedSeen++;
+      staleWaivers.delete(row.role);
+    }
   } else if (row.pass === false) {
     row.result = "FAIL";
     failures++;
@@ -447,16 +793,8 @@ function record(row) {
 for (const theme of ["light", "dark"]) {
   for (const pair of PAIRS) {
     const need = thresholdFor(pair);
-    const fgRaw = pair.fg.startsWith("--") ? resolveToken(pair.fg, theme) : pair.fg;
     for (const bgName of pair.bg) {
-      const bgRaw = bgName.startsWith("--") ? resolveToken(bgName, theme) : bgName;
-      // A translucent surface (dark's --surface-brand-soft, the soft status
-      // fills) is painted over the card, so composite before measuring.
-      const canvas = parseColor(resolveToken("--surface-card", theme));
-      const bg = over(parseColor(bgRaw), canvas);
-      const fg = over(parseColor(fgRaw), bg);
-      const ratio = contrast(fg, bg);
-      const pass = need === 0 ? null : ratio + 1e-9 >= need;
+      const { fg, bg, ratio, pass } = scorePair(pair.fg, bgName, need, theme);
       record({
         theme,
         role: pair.role,
@@ -575,6 +913,9 @@ const header = [
   "RESULT",
 ].join(" ");
 
+console.log(
+  `Instrument self-test: ${selfTestResult.ran} checks passed · tokens.css shape clean.\n`
+);
 console.log(header);
 console.log("-".repeat(header.length));
 for (const r of rows) {

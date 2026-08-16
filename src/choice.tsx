@@ -97,7 +97,7 @@ function ChoiceControl({
      */
     <label
       className={cn(
-        "inline-flex min-h-tap text-[13px] text-ink",
+        "inline-flex min-h-tap text-control",
         labelled
           ? cn(
               // items-start, not items-center: an attestation is three lines
@@ -108,9 +108,18 @@ function ChoiceControl({
               size === "tap" ? "gap-3 py-2.5" : "gap-2.5 py-3"
             )
           : "w-tap items-center justify-center",
-        // Matches Button: the whole control dims, label included, and 1.4.3
-        // exempts a disabled control from the contrast floor.
-        disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer",
+        // --text-disabled, not `opacity-45` (1.7.0). The whole control still
+        // dims, label included — but through a token the other controls share,
+        // rather than through a fade this file chose alone. Opacity dimmed the
+        // label THROUGH the card, and the label here is not a word like "Save":
+        // it is the attestation an operator is being asked to agree to, three
+        // lines long. 1.4.3 exempts a disabled control from the contrast floor;
+        // it does not license text nobody can read.
+        //
+        // A ternary rather than a flag beside the base `text-ink`, because `cn`
+        // is a plain join (contract.ts) — both colours would land in the class
+        // attribute and Tailwind's emit order, not this file, would decide.
+        disabled ? "cursor-not-allowed text-disabled-fg" : "cursor-pointer text-ink",
         className
       )}
     >
@@ -120,6 +129,21 @@ function ChoiceControl({
           // One line box tall, in em so it follows the label's type rather than
           // a copied px literal. This is what puts the box on the first line of
           // a wrapping label and centres it against a single-line one.
+          //
+          // The multiplier must equal the label's RENDERED line-height, and that
+          // is 1.5 — inherited from .e911-app, because `text-control` (like
+          // every 1.7.0 type token) declares font-size only. It deliberately
+          // carries no line-height, so that naming the literals could not
+          // retighten leading across the system inside a naming pass; see the
+          // type-token block in tokens.css.
+          //
+          // This briefly read 1.4 during 1.7.0, when the token still bundled a
+          // line-height and the label really did render at 1.4. The token
+          // changed underneath it. Kept as a warning: these two numbers are one
+          // measurement in two places, and the other place is a token file in
+          // another directory. Let them drift and the box stops sitting on the
+          // first line of a wrapping attestation, which is the only thing this
+          // rule exists for — and nothing type-checks it.
           labelled && "min-h-[1.5em]"
         )}
       >
@@ -132,7 +156,12 @@ function ChoiceControl({
           aria-invalid={invalid || undefined}
           className={cn(
             box,
-            "shrink-0 appearance-none border-chip bg-card",
+            // `peer` is load-bearing: the glyph plate below is a SIBLING with
+            // its own colour, and --text-on-action disappears on the disabled
+            // fill. Without `peer` there is no selector that can follow this
+            // input into :disabled, and a checked-but-disabled box comes out
+            // looking unchecked — a state misreport, not a dimming.
+            "peer shrink-0 appearance-none border-chip bg-card",
             "transition duration-fast ease-e911",
             type === "radio" ? "rounded-pill" : "rounded-xs",
             // The checked/indeterminate fill is drawn by the browser's own
@@ -145,7 +174,20 @@ function ChoiceControl({
             // a card that is also bg-card, so its stroke is the only thing that
             // identifies it. That is the tier held to 1.4.11's 3:1.
             invalid ? "border-bad" : "border-line-control",
+            // Disabled, from the system's tokens (1.7.0). The box used to have
+            // no disabled paint of its own at all — it borrowed the row's
+            // `opacity-45`, so removing that fade would have left a disabled
+            // checkbox looking exactly like a live one.
             "disabled:cursor-not-allowed",
+            "disabled:border-line-disabled disabled:bg-disabled",
+            // The compounds are not redundant. `checked:bg-action` is also
+            // (0,2,0), so a bare `disabled:bg-disabled` only ties with it and
+            // the cascade order settles it — and the losing outcome is a
+            // disabled control painted --action-primary, which is the single
+            // most pressable-looking thing in the system. (0,3,0) removes the
+            // question rather than betting on Tailwind's variant order.
+            "disabled:checked:border-line-disabled disabled:checked:bg-disabled",
+            "disabled:indeterminate:border-line-disabled disabled:indeterminate:bg-disabled",
             // Windows High Contrast: give the box back to the OS. Without this
             // an appearance:none control paints in system colours with no mark.
             "forced-colors:appearance-auto"
@@ -169,6 +211,13 @@ function ChoiceControl({
               // --text-on-action on --action-primary: the same pair the primary
               // button's label is audited on.
               "text-action-fg",
+              // …but the fill underneath is --surface-disabled once the input is
+              // disabled, and --text-on-action is a near-white that vanishes on
+              // it. The tick is the ONLY thing distinguishing a disabled checked
+              // box from a disabled empty one, so it has to survive: this
+              // repaints it on --text-disabled, the same tier the label uses.
+              // `peer-disabled:` is (0,2,0) and beats the (0,1,0) above it.
+              "peer-disabled:text-disabled-fg",
               // The OS draws its own mark in forced-colors mode.
               "forced-colors:hidden"
             )}

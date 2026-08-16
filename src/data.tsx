@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import { cn, CONTROL_HEIGHT, type ControlSize, type EdgeColor, type Tone } from "./core";
+// feedback.tsx carries no "use client" of its own — see the note at the top of
+// it. Importing it from here does not change that for anyone else.
+import { Skeleton } from "./feedback";
 
 /* --------------------------------------------------------------- edge map */
 const edgeClass: Record<EdgeColor, string> = {
@@ -124,11 +127,23 @@ export function KpiCard({ edge, label, value, delta, sub, className }: KpiCardPr
       </span>
       <b className="mt-1 block font-display text-kpi tabular-nums">{value}</b>
       {(delta || sub) && (
-        <span className="mt-1 flex items-center gap-1.5 text-[11.5px] text-muted">
+        <span className="mt-1 flex items-center gap-1.5 text-meta text-muted">
           {delta ? (
             <span
               className={cn(
-                "rounded-[6px] px-1.5 py-px font-mono text-[10px] font-medium",
+                // rounded-[6px] is the ONE undeclared radius left in this file,
+                // and it stays until a token exists — deliberately, not by
+                // oversight. The system declares four (xs 5 / sm 8 / md 10 /
+                // lg 14) plus pill. `xs` is scoped by name AND by comment in
+                // tokens.css to the box of a Checkbox ("a chip, an input or a
+                // card that reaches for it is a review block"), so this badge
+                // may not take it. `sm` is 8px on a ~15px-tall pill, which the
+                // browser clamps to half the height and paints as a stadium —
+                // that is a StatusTag's shape, and this is not a status. It
+                // would also desync from CertChip in core.tsx, which is the
+                // same badge at the same 6px. Both call sites move together or
+                // neither does. See the 1.7.0 report.
+                "rounded-[6px] px-1.5 py-px font-mono text-badge font-medium",
                 delta.direction === "up" && "bg-ok-soft text-ok",
                 delta.direction === "down" && "bg-bad-soft text-bad",
                 delta.direction === "flat" && "bg-tint text-muted"
@@ -244,7 +259,39 @@ export interface DataTableProps<Row> {
    * alike.
    */
   rowClickable?: (row: Row) => boolean;
+  /**
+   * What an empty table says. DEFAULTED rather than required (1.7.0): until
+   * then the guard was `rows.length === 0 && empty`, so a table that shipped
+   * without the prop rendered a header row over nothing at all — a column
+   * strip with a void under it, which reads as "still loading" or as "the app
+   * is broken", never as "there is nothing here". Every consuming screen that
+   * forgot the prop had that bug and none of them looked wrong in review,
+   * because the header made the card look populated.
+   *
+   * Defaulted and not made required on purpose: making it required is a
+   * compile error in every consumer that was already correct-by-omission on a
+   * table that is never empty, which turns a rendering fix into a migration.
+   * The default is deliberately flat — a system cannot know what is missing or
+   * what would end it. Pass an <EmptyState> the moment you can say either.
+   */
   empty?: React.ReactNode;
+  /**
+   * Render skeleton rows instead of `rows` (1.7.0). The system had no loading
+   * state at all before this, and the gap is not cosmetic: a table that is
+   * still fetching and a table with no rows were the SAME rendering, so an
+   * operator on a slow link read "No exceptions" off a queue that had 40 of
+   * them and walked away. `loading` outranks the empty path for exactly that
+   * reason — an empty state may not flash before the data lands.
+   *
+   * The header renders throughout, so the column strip does not jump when the
+   * rows arrive.
+   */
+  loading?: boolean;
+  /**
+   * How many skeleton rows. The default holds roughly a card's worth of height
+   * so the page does not reflow under the pointer when the real rows land.
+   */
+  loadingRows?: number;
   "aria-label"?: string;
 }
 
@@ -273,118 +320,231 @@ export function DataTable<Row>({
   rowLinkPurpose,
   renderLink,
   rowClickable,
-  empty,
+  empty = "No rows to show.",
+  loading = false,
+  loadingRows = 5,
   ...rest
 }: DataTableProps<Row>) {
-  if (rows.length === 0 && empty) {
-    return <div className="px-4 py-9 text-center text-[12.5px] text-muted">{empty}</div>;
+  // `loading` outranks the empty path — see the prop. An empty state that
+  // flashes before the rows land is worse than none, because it is a sentence
+  // the operator believes and acts on.
+  if (!loading && rows.length === 0) {
+    return <div className="px-4 py-9 text-center text-ribbon-meta text-muted">{empty}</div>;
   }
+  // Emptied rather than skipped, so the skeleton branch below needs no second
+  // guard and the row renderer keeps its indentation and its diff.
+  const bodyRows: Row[] = loading ? [] : rows;
   return (
-    <table className="w-full border-collapse" {...rest}>
-      <thead>
-        <tr>
+    <div
+      /* THE SCROLL REGION (1.7.0). Without it a wide table is CLIPPED and gone:
+         DomainCard sets overflow-hidden (it has to — a flush table would
+         otherwise square off the card's own corners), this table renders wider
+         than the card whenever the sum of its columns exceeds it, and the
+         header cells are whitespace-nowrap so they cannot shrink to fit. On a
+         1024px wall tablet that means the right-hand columns of a timecard are
+         not merely awkward to read, they are unreachable — no scrollbar, no
+         cut-off edge, no hint that anything is missing. Six screens in the
+         first consuming app had each wrapped this component in an overflow-x
+         div of their own, which is the system being asked for something six
+         times and not answering.
+
+         tabIndex + role + name are the accessibility half, and they are not
+         optional decoration: a region that scrolls is content a keyboard user
+         must be able to reach, and a container that only a pointer can pan is
+         a 2.1.1 failure on the same grounds this component already refused to
+         let `onRowClick` navigate a row. Naming the region duplicates the
+         table's own name by design — "Exception queue region", then "Exception
+         queue table" — which is what a <caption> would give if this component
+         had one, and an anonymous tab stop is worse than a repeated word.
+
+         NO FOCUS RING HERE. tokens.css draws one indicator for the whole
+         system; a local ring is how one control ends up with a different one.
+         (It is also unlayered CSS, so a utility could not win against it
+         anyway — see the border-radius note in tokens.css.)
+
+         WATCH OUT if a sticky header is ever added: `overflow-x: auto` makes
+         this a scroll container on BOTH axes, because CSS resolves the other
+         axis's `visible` to `auto`. A `position: sticky` thead would then stick
+         to this box rather than to the viewport, and this box never scrolls
+         vertically — so the header would simply stop sticking, silently. */
+      tabIndex={0}
+      role="region"
+      // Falls back to a generic name rather than going unnamed: role="region"
+      // with no accessible name is not exposed as a landmark at all (the same
+      // trap DomainCard's <section> was in), and the fallback at least tells a
+      // keyboard user what they have landed on. Pass `aria-label`.
+      aria-label={rest["aria-label"] ?? "Table"}
+      className="overflow-x-auto"
+    >
+      {loading ? (
+        // aria-busy says "this is in flux" to a reader already on the table; a
+        // status says it to one who is not. Neither is the skeleton's job —
+        // see Skeleton, which is aria-hidden.
+        <span role="status" className="sr-only">
+          Loading…
+        </span>
+      ) : null}
+      {/* min-w-max is the "do not crush" half. w-full alone lets the table
+          resolve to the container width and squeeze columns until cells wrap,
+          which turns a 40px row rhythm into ragged four-line rows rather than
+          into a scroll — and wrapping is the failure mode that looks fine in
+          review and is unusable on the floor. max-content rather than a px
+          floor on purpose: a number here would be an undeclared metric that
+          drifts, while the keyword states the actual rule the system wants —
+          a DataTable scrolls, it never crushes. */}
+      <table
+        className="w-full min-w-max border-collapse"
+        aria-busy={loading || undefined}
+        {...rest}
+      >
+        <thead>
+          <tr>
+            {columns.map((c) => (
+              <th
+                key={c.key}
+                // Implicit column scope is what every current browser and AT
+                // infers anyway; saying it is free, and no consumer can add it
+                // without hand-rolling the markup this component exists to own.
+                scope="col"
+                style={c.width ? { width: c.width } : undefined}
+                className={cn(
+                  "whitespace-nowrap border-b border-line bg-sunken px-4 py-2",
+                  // The tracking stays HERE and --text-micro deliberately does
+                  // not carry it. The token has two consumers that genuinely
+                  // disagree — this header at 0.06em and the ribbon eyebrow at
+                  // 0.1em — so any value in the token is silently wrong at one
+                  // of them, and "silently wrong at one call site" is the whole
+                  // failure this pass exists to end.
+                  //
+                  // This briefly read without the tracking during 1.7.0, when
+                  // the token still declared 0.06em; removing that from the
+                  // token to serve the eyebrow took the header's tracking with
+                  // it, and nothing type-checks a letterform.
+                  "text-micro font-semibold uppercase tracking-[0.06em] text-faint",
+                  c.align === "right" ? "text-right" : "text-left"
+                )}
+              >
+                {c.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? <SkeletonRows columns={columns} count={loadingRows} /> : null}
+          {bodyRows.map((row) => {
+            const active = rowClickable ? rowClickable(row) : true;
+            const href = active && rowHref ? rowHref(row) : undefined;
+            const interactive = active && (href != null || onRowClick != null);
+            const purpose = href != null && rowLinkPurpose ? rowLinkPurpose(row) : undefined;
+
+            // The purpose is the anchor's LAST child, never an aria-label: the
+            // name is then "visible text, then purpose" by construction, which is
+            // what WCAG 2.5.3 asks for and what no string prop could guarantee.
+            let linkCount = 0;
+            const rowLink = (content: React.ReactNode): React.ReactNode => {
+              if (href == null) return content; // a row that navigates nowhere
+              linkCount += 1;
+              const children = purpose ? (
+                <>
+                  {content}
+                  <span className="sr-only">{` ${purpose}`}</span>
+                </>
+              ) : (
+                content
+              );
+              return renderLink
+                ? renderLink({ href, className: rowLinkClass, children })
+                : <a href={href} className={rowLinkClass}>{children}</a>;
+            };
+
+            // Cells are rendered BEFORE the row is assembled so the fallback can
+            // see whether any of them claimed the link. Two passes would be one
+            // too many; React nodes are values, so building the array first costs
+            // nothing and lets any column host the anchor.
+            const cells = columns.map((c) => c.cell(row, { rowLink }));
+            if (href != null && linkCount === 0 && cells.length > 0) {
+              // Pre-1.5.0 behaviour, unchanged: the anchor wraps the first cell.
+              cells[0] = rowLink(cells[0]);
+            }
+            if (linkCount > 1) {
+              // Two anchors is two tab stops for one destination, and the row's
+              // own click delegates to whichever comes first. Always a defect.
+              console.error(
+                "[e911] DataTable: ctx.rowLink was called more than once in one row — " +
+                  "a row has exactly one link. Wrap only the row's subject."
+              );
+            }
+            return (
+              <tr
+                key={rowKey(row)}
+                onClick={
+                  interactive
+                    ? (e) => {
+                        // A click that already landed on the row's own link has
+                        // navigated; re-firing it here would navigate twice.
+                        if (e.target instanceof Element && e.target.closest("a.e911-row-link")) return;
+                        if (onRowClick) onRowClick(row);
+                        // Delegate to the LINK rather than to a router this
+                        // package does not have: whatever the app passed as
+                        // renderLink handles the navigation, so a row click and a
+                        // keyboard activation take exactly the same path.
+                        else e.currentTarget.querySelector<HTMLAnchorElement>("a.e911-row-link")?.click();
+                      }
+                    : undefined
+                }
+                className={cn(
+                  "border-b border-line-row last:border-b-0",
+                  interactive && "cursor-pointer transition duration-fast hover:bg-tint"
+                )}
+              >
+                {columns.map((c, i) => (
+                  <td
+                    key={c.key}
+                    className={cn(
+                      "h-row px-4 align-middle text-table",
+                      c.align === "right" && "text-right"
+                    )}
+                  >
+                    {cells[i]}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * The loading table's rows. Split out so the real row renderer above keeps its
+ * shape — a ternary around 60 lines of row assembly is a diff nobody can read.
+ *
+ * Rendered inside the SAME <table> as the header, deliberately: a spinner in
+ * place of the whole table throws away the column widths, so the page reflows
+ * twice (once into the spinner, once out of it) and the operator's pointer is
+ * over something else by the time the rows arrive.
+ */
+function SkeletonRows<Row>({ columns, count }: { columns: Array<Column<Row>>; count: number }) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => (
+        <tr key={`e911-skeleton-${i}`} className="border-b border-line-row last:border-b-0">
           {columns.map((c) => (
-            <th
-              key={c.key}
-              // Implicit column scope is what every current browser and AT
-              // infers anyway; saying it is free, and no consumer can add it
-              // without hand-rolling the markup this component exists to own.
-              scope="col"
-              style={c.width ? { width: c.width } : undefined}
-              className={cn(
-                "whitespace-nowrap border-b border-line bg-sunken px-4 py-2",
-                "text-[10.5px] font-semibold uppercase tracking-[0.06em] text-faint",
-                c.align === "right" ? "text-right" : "text-left"
-              )}
-            >
-              {c.header}
-            </th>
+            // h-row, matching the real cell below, is the whole point: the
+            // loading table occupies exactly the height the loaded one will.
+            <td key={c.key} className="h-row px-4 align-middle">
+              {/* Fixed fractions rather than a random length per row: a
+                  skeleton that reshuffles on re-render is motion nobody asked
+                  for. A right-aligned (numeric) column loads a right-aligned
+                  bar, so the eye is already where the digits will be. */}
+              <Skeleton className={c.align === "right" ? "ml-auto w-1/2" : "w-2/3"} />
+            </td>
           ))}
         </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const active = rowClickable ? rowClickable(row) : true;
-          const href = active && rowHref ? rowHref(row) : undefined;
-          const interactive = active && (href != null || onRowClick != null);
-          const purpose = href != null && rowLinkPurpose ? rowLinkPurpose(row) : undefined;
-
-          // The purpose is the anchor's LAST child, never an aria-label: the
-          // name is then "visible text, then purpose" by construction, which is
-          // what WCAG 2.5.3 asks for and what no string prop could guarantee.
-          let linkCount = 0;
-          const rowLink = (content: React.ReactNode): React.ReactNode => {
-            if (href == null) return content; // a row that navigates nowhere
-            linkCount += 1;
-            const children = purpose ? (
-              <>
-                {content}
-                <span className="sr-only">{` ${purpose}`}</span>
-              </>
-            ) : (
-              content
-            );
-            return renderLink
-              ? renderLink({ href, className: rowLinkClass, children })
-              : <a href={href} className={rowLinkClass}>{children}</a>;
-          };
-
-          // Cells are rendered BEFORE the row is assembled so the fallback can
-          // see whether any of them claimed the link. Two passes would be one
-          // too many; React nodes are values, so building the array first costs
-          // nothing and lets any column host the anchor.
-          const cells = columns.map((c) => c.cell(row, { rowLink }));
-          if (href != null && linkCount === 0 && cells.length > 0) {
-            // Pre-1.5.0 behaviour, unchanged: the anchor wraps the first cell.
-            cells[0] = rowLink(cells[0]);
-          }
-          if (linkCount > 1) {
-            // Two anchors is two tab stops for one destination, and the row's
-            // own click delegates to whichever comes first. Always a defect.
-            console.error(
-              "[e911] DataTable: ctx.rowLink was called more than once in one row — " +
-                "a row has exactly one link. Wrap only the row's subject."
-            );
-          }
-          return (
-            <tr
-              key={rowKey(row)}
-              onClick={
-                interactive
-                  ? (e) => {
-                      // A click that already landed on the row's own link has
-                      // navigated; re-firing it here would navigate twice.
-                      if (e.target instanceof Element && e.target.closest("a.e911-row-link")) return;
-                      if (onRowClick) onRowClick(row);
-                      // Delegate to the LINK rather than to a router this
-                      // package does not have: whatever the app passed as
-                      // renderLink handles the navigation, so a row click and a
-                      // keyboard activation take exactly the same path.
-                      else e.currentTarget.querySelector<HTMLAnchorElement>("a.e911-row-link")?.click();
-                    }
-                  : undefined
-              }
-              className={cn(
-                "border-b border-line-row last:border-b-0",
-                interactive && "cursor-pointer transition duration-fast hover:bg-tint"
-              )}
-            >
-              {columns.map((c, i) => (
-                <td
-                  key={c.key}
-                  className={cn(
-                    "h-row px-4 align-middle text-table",
-                    c.align === "right" && "text-right"
-                  )}
-                >
-                  {cells[i]}
-                </td>
-              ))}
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+      ))}
+    </>
   );
 }
 
@@ -420,7 +580,7 @@ export function FormField({ id, label, hint, error, size = "md", children }: For
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
     <div className="flex max-w-[340px] flex-col gap-1.5">
-      <label htmlFor={id} className="text-[12.5px] font-medium text-muted">
+      <label htmlFor={id} className="text-ribbon-meta font-medium text-muted">
         {label}
       </label>
       {children({
@@ -430,7 +590,7 @@ export function FormField({ id, label, hint, error, size = "md", children }: For
         className: cn(
           CONTROL_HEIGHT[size],
           size === "tap" ? "px-3" : "px-2.5",
-          "rounded-sm border-chip bg-card text-[13px] text-ink",
+          "rounded-sm border-chip bg-card text-control text-ink",
           "focus:outline-none focus:border-[var(--focus-ring)]",
           "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
           // --border-control, not --border-default: a field's stroke is the only
@@ -440,11 +600,11 @@ export function FormField({ id, label, hint, error, size = "md", children }: For
         ),
       })}
       {error ? (
-        <span id={`${id}-error`} className="text-[11.5px] font-medium text-bad">
+        <span id={`${id}-error`} className="text-meta font-medium text-bad">
           {error}
         </span>
       ) : hint ? (
-        <span id={`${id}-hint`} className="text-[11.5px] text-faint">
+        <span id={`${id}-hint`} className="text-meta text-faint">
           {hint}
         </span>
       ) : null}

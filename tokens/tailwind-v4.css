@@ -53,6 +53,8 @@
   --color-line-strong:  var(--border-strong);
   --color-line-row:     var(--border-row);
   --color-line-control: var(--border-control);
+  --color-line-disabled: var(--border-disabled);
+  --color-line-selected: var(--border-selected);
 
   /* status — always paired with a dot and a word, never color alone */
   --color-ok:        var(--status-ok);
@@ -65,6 +67,23 @@
      a dark red in light and a light salmon in dark, so one fixed white label
      measures 6.5:1 in one theme and 2.95:1 in the other. */
   --color-bad-fg:    var(--text-on-danger);
+  /* Added 1.7.0 so `warn` can mean caution again — see tokens.css for the
+     census that forced it. Still pill + dot + word. */
+  --color-info:         var(--status-info);
+  --color-info-soft:    var(--status-info-soft);
+  --color-neutral:      var(--status-neutral);
+  --color-neutral-soft: var(--status-neutral-soft);
+
+  /* disabled / selected — the two states each component used to invent.
+     Shaped like `action`, not like a tone: a state is a FILL with a foreground
+     on it, so the trio is `bg-disabled` / `text-disabled-fg` /
+     `border-line-disabled`, mirroring `bg-action` / `text-action-fg`.
+     `text-disabled` is NOT the label colour — it resolves to the near-white
+     fill, i.e. white text on a white card, which compiles and is invisible.
+     `selected` has no `fg`: a selected row keeps --text-primary. */
+  --color-disabled:     var(--surface-disabled);
+  --color-disabled-fg:  var(--text-disabled);
+  --color-selected:     var(--surface-selected);
 
   /* domain edges — one domain, one hue, everywhere */
   --color-edge-orange: var(--e911-edge-orange);
@@ -126,6 +145,49 @@
   --text-ribbon-meta: var(--font-size-ribbon-meta);
   --text-ribbon-meta--line-height: 1.35;
 
+  /* The eight sizes that lived as text-[Npx] literals inside this package's own
+     components until 1.7.0. Values unchanged; this pass only names them.
+
+     NO --line-height MEMBERS, DELIBERATELY. A `text-[10.5px]` literal sets
+     font-size and nothing else, so all of these elements have always inherited
+     1.5 from `.e911-app`. A v4 `--text-*--line-height` would set it, and the
+     first cut of these tokens did — which would have retightened the ribbon
+     eyebrow and its h1 by ~11px combined on every page header in every E911
+     app, inside a commit whose message says nothing renders differently. One
+     consumer caught it and defended itself with `leading-normal` at the call
+     site; that works and is the wrong layer, because the next consumer has to
+     know to repeat it. Font-size only, leading still inherited, nothing moves.
+
+     What leading a 10px mono badge actually wants is a real design question and
+     gets its own pass. Both ports must stay identical on this.
+
+     --text-micro MUST NOT declare letter-spacing: its two consumers disagree
+     (ribbon eyebrow 0.1em, DataTable column header 0.06em), so any token value
+     is silently wrong at one of them. Both keep an explicit `tracking-*`. */
+  --text-micro: var(--font-size-micro);
+  --text-badge: var(--font-size-badge);
+
+  /* The status pill's word. NOT --text-label — same 11px, but label carries
+     +0.05em caps tracking that a StatusTag must not have. */
+  --text-tag: var(--font-size-tag);
+
+  --text-meta: var(--font-size-meta);
+  --text-ui-sm: var(--font-size-ui-sm);
+  --text-control: var(--font-size-control);
+
+  /* The ribbon headline. Distinct from --text-h1 (20px), which serves a page
+     with no ribbon at all — sign-in, kiosk. See tokens.css. Weight and tracking
+     ARE declared here, unlike the others, because the literal they replace
+     carried `font-bold tracking-[-0.015em]` at exactly these values. */
+  --text-ribbon-h1: var(--font-size-ribbon-h1);
+  --text-ribbon-h1--letter-spacing: -0.015em;
+  --text-ribbon-h1--font-weight: 700;
+
+  /* Logotype only — the seal's "911", exempt from the contrast floor (1.4.3).
+     No letter-spacing member: declaring one in the v3 preset and not here made
+     the two ports render the lockup differently. */
+  --text-seal: var(--font-size-seal);
+
   /* radii — three tokens and a pill, nothing else.
 
      `--radius` (no suffix) is Tailwind v4's deprecated-but-still-live key behind
@@ -186,6 +248,9 @@
 /* transition-duration */
 @utility duration-fast { transition-duration: var(--e911-dur-fast); }
 @utility duration-base { transition-duration: var(--e911-dur); }
+/* For movement that changes SIZE or POSITION — the rail opening, a Dialog
+   entering. Not for a colour change; see tokens.css. Added 1.7.0. */
+@utility duration-slow { transition-duration: var(--e911-dur-slow); }
 
 /* z-index: v4 resolves `z-<number>` arithmetically and has no theme namespace to
    hang names off, so the floating-layer scale has to be real utilities here even

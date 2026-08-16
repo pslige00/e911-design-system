@@ -445,7 +445,7 @@ export function DateField({
           }
         }}
         className={cn(
-          "w-full rounded-sm border-chip bg-card pr-tap text-[13px] text-ink",
+          "w-full rounded-sm border-chip bg-card pr-tap text-control text-ink",
           CONTROL_HEIGHT[size],
           size === "tap" ? "pl-3" : "pl-2.5",
           // Dates are mono + tabular everywhere in this system, including while
@@ -453,7 +453,17 @@ export function DateField({
           "font-mono tabular-nums",
           "focus:border-[var(--focus-ring)] focus:outline-none",
           "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
-          "disabled:cursor-not-allowed disabled:opacity-45",
+          // The system's disabled tokens (1.7.0), replacing this file's own
+          // `opacity-45`. On a MONO field the old treatment was the worst of the
+          // three: a faded YYYY-MM-DD is exactly the string an operator has to
+          // read digit by digit to see why the form will not move.
+          //
+          // These are (0,2,0) and so they also beat `border-bad` below at
+          // (0,1,0) — deliberately. A disabled field must not shout "bad": the
+          // operator cannot answer a complaint about a field they cannot type
+          // in, and the red would send them hunting for a fix that is not there.
+          "disabled:cursor-not-allowed",
+          "disabled:border-line-disabled disabled:bg-disabled disabled:text-disabled-fg",
           // `refused` is the field's own mark; `invalid` is the app's. Either
           // one paints the bad border, and a refusal shows immediately rather
           // than waiting for a render the app might not do.
@@ -470,8 +480,12 @@ export function DateField({
         aria-expanded={open}
         className={cn(
           "absolute right-0 top-1/2 grid size-tap -translate-y-1/2 place-items-center",
-          "rounded-sm text-faint transition duration-fast ease-e911 hover:text-ink",
-          "disabled:cursor-not-allowed disabled:opacity-45"
+          // `enabled:hover:`, not bare `hover:`. Chrome still matches :hover on
+          // a disabled button, and `hover:text-ink` at (0,2,0) would tie with
+          // `disabled:text-disabled-fg` — a greyed trigger that lights up under
+          // the cursor reads as pressable, and the operator presses it.
+          "rounded-sm text-faint transition duration-fast ease-e911 enabled:hover:text-ink",
+          "disabled:cursor-not-allowed disabled:text-disabled-fg"
         )}
       >
         <CalendarIcon />
@@ -547,12 +561,41 @@ export function DateField({
                         aria-label={`${cell.d} ${MONTH_NAMES[cell.m - 1] ?? ""} ${cell.y}`}
                         onClick={() => pick(iso)}
                         className={cn(
-                          "grid size-tap place-items-center rounded-sm font-mono text-[12px] tabular-nums",
+                          "grid size-tap place-items-center rounded-sm font-mono text-ui-sm tabular-nums",
                           "transition duration-fast ease-e911",
-                          off && "cursor-not-allowed text-faint opacity-45",
-                          !off && outside && "text-faint hover:bg-tint",
-                          !off && !outside && "text-ink hover:bg-tint",
-                          isSelected && "border-chip border-action bg-brand-soft font-semibold text-brand-text",
+                          // The disabled day, shared with Select and Checkbox
+                          // (1.7.0). Was `text-faint opacity-45`, which stacked
+                          // a fade on top of an already-recessive tier and put a
+                          // blacked-out holiday within a hair of invisible.
+                          off && "cursor-not-allowed text-disabled-fg",
+                          !off && !isSelected && (outside ? "text-faint" : "text-ink"),
+                          // Hover is a TRANSIENT pointer state and stays on
+                          // tint — but it is withheld from the chosen day, and
+                          // that guard is the actual bug fix. `hover:bg-tint` is
+                          // (0,2,0) and the selected fill was (0,1,0), so
+                          // resting the pointer on the selected day repainted it
+                          // as an ordinary hovered one and the operator lost
+                          // sight of which day was theirs mid-selection.
+                          !off && !isSelected && "hover:bg-tint",
+                          // The chosen day: --surface-selected + --border-selected
+                          // (1.7.0), not --surface-brand-soft. brand-soft means
+                          // ACTIVE NAV DESTINATION — "where you are" — and
+                          // reusing it here made a picked day claim to be a
+                          // place. --surface-selected is one step darker than
+                          // tint in light and one step lighter in dark, so a
+                          // choice outranks a hover in both themes.
+                          //
+                          // Never colour alone: the gridcell carries
+                          // aria-selected and the weight changes with it.
+                          isSelected && "border-chip border-line-selected font-semibold",
+                          // Split from the line above so an out-of-range day
+                          // that is ALSO the current value — the 1.5.0 path,
+                          // where a typed date the bounds refuse is still
+                          // emitted and still shown — keeps the selected ring
+                          // (it IS the value) while the disabled text colour
+                          // says it is not available. Painting bg-selected there
+                          // would advertise it as a day the operator may keep.
+                          isSelected && !off && "bg-selected text-brand-text",
                           // Today is marked with an underline, not a fill — a
                           // filled today would be indistinguishable from the
                           // selected day at a glance across the room.

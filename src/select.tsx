@@ -365,13 +365,32 @@ export function Select<T extends string = string>({
         onKeyDown={onKeyDown}
         onClick={() => (open ? close(false) : openList(selectedIndex >= 0 ? selectedIndex : firstEnabled()))}
         className={cn(
-          "relative inline-flex w-full items-center gap-2 rounded-sm border-chip bg-card",
-          "text-left text-[13px] transition duration-fast ease-e911",
+          // `group` is load-bearing: the chevron below is a separate element
+          // with its own colour, so it needs `group-disabled:` to follow the
+          // trigger into the disabled state. Without it the decoration stays
+          // --text-tertiary while the label drops to --text-disabled, and the
+          // arrow ends up DARKER than the label it belongs to.
+          "group relative inline-flex w-full items-center gap-2 rounded-sm border-chip bg-card",
+          "text-left text-control transition duration-fast ease-e911",
           CONTROL_HEIGHT[size],
           size === "tap" ? "px-3" : "px-2.5",
           "focus:border-[var(--focus-ring)] focus:outline-none",
           "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
-          "disabled:cursor-not-allowed disabled:opacity-45",
+          // Disabled comes from the system now (1.7.0), not from this file.
+          // `opacity-45` was one of three treatments three components each
+          // invented separately, and it dims the label THROUGH the card, so a
+          // long option name on a disabled filter reads as a watermark rather
+          // than as text. 1.4.3 exempts a disabled control from the contrast
+          // floor; it does not exempt it from being legible enough to say WHICH
+          // control is unavailable.
+          //
+          // Every `disabled:` utility here is (0,2,0) and beats the plain
+          // `bg-card` / `border-line-control` / `text-ink` at (0,1,0). That
+          // matters: `cn` is a plain join (contract.ts), NOT tailwind-merge, so
+          // conflicting utilities both land in the attribute and the cascade —
+          // not the order you wrote them in — picks the winner.
+          "disabled:cursor-not-allowed",
+          "disabled:border-line-disabled disabled:bg-disabled disabled:text-disabled-fg",
           // At `md` the control keeps the system's 32px height, but a finger
           // needs 44px: the pseudo-element extends only the HIT area, so density
           // is unchanged — give stacked selects at least a 12px gap so the areas
@@ -388,7 +407,7 @@ export function Select<T extends string = string>({
         {...aria}
       >
         <span className="min-w-0 flex-1 truncate">{selected?.label ?? placeholder}</span>
-        <span aria-hidden className="text-faint">
+        <span aria-hidden className="text-faint group-disabled:text-disabled-fg">
           <ChevronIcon />
         </span>
       </button>
@@ -407,7 +426,7 @@ export function Select<T extends string = string>({
           )}
         >
           {options.length === 0 ? (
-            <li className="px-2.5 py-2 text-[12.5px] text-faint">No options</li>
+            <li className="px-2.5 py-2 text-ribbon-meta text-faint">No options</li>
           ) : null}
           {options.map((option, index) => {
             const isSelected = option.value === value;
@@ -427,10 +446,38 @@ export function Select<T extends string = string>({
                 }}
                 onPointerEnter={() => !option.disabled && setActiveIndex(index)}
                 className={cn(
-                  "flex min-h-tap cursor-pointer items-center gap-2 rounded-sm px-2.5 text-[13px]",
-                  option.disabled && "cursor-not-allowed opacity-45",
-                  isActive && !option.disabled && "bg-tint",
-                  isSelected ? "font-semibold text-brand-text" : "text-ink"
+                  "flex min-h-tap cursor-pointer items-center gap-2 rounded-sm px-2.5 text-control",
+                  // ONE mutually exclusive chain, not four independent flags.
+                  // `cn` is a plain join, so two conflicting utilities both land
+                  // in the class attribute and the CASCADE decides which one an
+                  // operator sees — the same mechanism that let `hover:bg-tint`
+                  // paint over the chosen day in DateField. Nothing below
+                  // overlaps, so nothing depends on Tailwind's emit order.
+                  option.disabled
+                    ? // Shared with the trigger, the calendar and Checkbox
+                      // (1.7.0). Was `opacity-45`, which faded the label toward
+                      // the card instead of colouring it.
+                      "cursor-not-allowed text-disabled-fg"
+                    : isSelected
+                      ? // --surface-selected, NOT --surface-tint (1.7.0). Both
+                        // states were tint, so an option the pointer merely
+                        // rested on was painted exactly like the one the
+                        // operator had chosen — on a list of shift codes that
+                        // is a wrong pick waiting to happen. Selected is one
+                        // step DARKER than tint in light and one step LIGHTER
+                        // in dark, deliberately, so a choice outranks a pointer
+                        // that happens to be resting on it. That is also why
+                        // hover is NOT re-applied on this branch: the selection
+                        // has to survive being hovered.
+                        //
+                        // Never colour alone — `aria-selected` is on the <li>,
+                        // the weight changes, and the check mark below renders.
+                        "bg-selected font-semibold text-brand-text"
+                      : isActive
+                        ? // Hover AND keyboard-active: `onPointerEnter` sets
+                          // activeIndex too, so one transient fill covers both.
+                          "bg-tint text-ink"
+                        : "text-ink"
                 )}
               >
                 <span className="min-w-0 flex-1 truncate">{option.label}</span>

@@ -203,7 +203,7 @@ export function Tooltip({
           style={style}
           className={cn(
             "pointer-events-none z-popover max-w-[240px] rounded-sm border border-line bg-card",
-            "px-2 py-1 text-[12px] font-medium text-ink shadow-pop"
+            "px-2 py-1 text-ui-sm font-medium text-ink shadow-pop"
           )}
         >
           {content}

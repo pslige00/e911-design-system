@@ -11,8 +11,11 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 
 1. **Semantic tokens only.** App code references Tier 2 names (`var(--surface-card)`,
    `text-ink`, `bg-action`) — never hex values, never Tier 1 primitives, never
-   hard-coded px radii or font names. If a needed token doesn't exist, add it to
-   `tokens.css` in the design-system repo and open a PR there; don't inline a value.
+   hard-coded px radii, px type sizes, or font names. If a needed token doesn't
+   exist, add it to `tokens.css` in the design-system repo and open a PR there;
+   don't inline a value. **Since 1.7.0 this binds the package too:** it was
+   itself writing `text-[Npx]` 27 times across 8 components, at sizes a consumer
+   could not name, override, or be linted against.
 2. **Fonts:** Space Grotesk (display: headings + KPI numerals, weight 700,
    tracking -0.015em) · Onest (all body/UI) · JetBrains Mono (dates, IDs,
    deltas, cert codes — always with `tabular-nums`). Load from Google Fonts or
@@ -20,8 +23,45 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 3. **Orange discipline.** `#E8690A` (--e911-brand) appears ONLY in the seal and
    the ribbon gradient. Fills use `--action-primary` (#C74F00). Orange text uses
    `--text-brand` (#A83B00). Orange is never a warning color.
-4. **Status is pill + dot + word.** Never color alone. Use `ok / warn / bad`
-   token pairs (`--status-warn` on `--status-warn-soft`).
+4. **Status is pill + dot + word.** Never color alone. Five tones since 1.7.0 —
+   `ok / warn / bad / info / neutral` — each a token pair (`--status-warn` on
+   `--status-warn-soft`).
+
+   **When `neutral` is legitimate.** It is for a state that is real, known, and
+   carries no judgement: a classification the operator should read but need not
+   act on — "Voluntary", "Salaried", "Draft". It is NOT the tone for "I could
+   not decide", and it is not a way to avoid choosing one. The test is one
+   sentence: **if the label would read exactly the same with no pill at all, the
+   answer is no pill, not a neutral one.** A pill is a claim that the state
+   matters enough to mark; a neutral pill around a word that was already doing
+   its own work is decoration with a border-radius, and it costs a dispatcher a
+   glance to discover it says nothing. `info` is the neighbouring case — a fact
+   worth reading that carries no action: provenance, "this is a live estimate",
+   "recorded by a supervisor".
+
+   **Why the tones widened, so it is not re-argued from taste.** The system
+   shipped three on purpose until 1.7.0, and the argument was a good one: *a
+   status with no tone is a status the reader has to interpret.* What it missed
+   is what happens to the tone that absorbs everything the other two cannot
+   classify. Census taken in the first consuming app before the change: `warn`
+   was used **84 times across ~60 distinct labels, and about 17 of them were
+   cautionary.** The other two-thirds were neutral classification — "Note",
+   "Net", "Moves money", "Eligible", "Live estimate" — and plain absence: "No
+   timesheet", "Not configured", "No roster for this date". Gold meant "this
+   needs attention" and "pay is not in question" on the same screen, in the same
+   table. `info` and `neutral` exist to give the amber back its meaning, not to
+   let a status avoid having one.
+
+   **And the word got MORE load-bearing, not less.** Relative luminance of the
+   five light-theme tones: `info` 0.1104 · `bad` 0.1125 · `ok` 0.1132 ·
+   `neutral` 0.1135 · `warn` 0.1280 — a **0.018 spread across the whole set**,
+   with three of them stacked inside 0.001 of each other. Every one clears 4.5:1
+   on its own fill (5.14–5.58 in light), which is all AA asks — and all AA asks:
+   to a dichromat, or to anyone reading a dim wall tablet from across the room,
+   five tones are five shades of one grey. Colour was always the secondary
+   channel here; doubling the palette doubles the dot's and the word's job. A
+   `StatusTag` carrying a tone and no word is a review block at five tones for
+   exactly the reason it was at three.
 5. **A `title=` is not a tooltip.** It never appears on touch, never on focus,
    cannot be styled, and gets announced on top of the `aria-label` it usually
    duplicates. Until 1.3.0 this file promised "tooltips on hover" and the rail
@@ -124,6 +164,72 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
    hue and renders a 4px top edge in the default border colour — **no error, no
    warning, just the wrong card.** The root export points at `contract.ts`,
    which has no `"use client"`, and is safe from either side.
+12. **Disabled and selected are tokens, not each component's opinion.** New in
+   1.7.0, because until then there was no token for either and `Button`,
+   `Select` and `DateField` had each picked their own opacity or their own grey.
+   Nothing compared them — the same shape of drift that produced the 2.01:1
+   ribbon button label, where two halves were free to desync and no single place
+   would notice.
+   - **Disabled:** `--surface-disabled`, `--text-disabled`, `--border-disabled`.
+     WCAG 1.4.3 exempts a disabled control from the contrast floor, and the
+     audit records these as `kind:"disabled"` rather than failing on them. That
+     exemption is permission to be **quiet, not permission to be unreadable** —
+     a dispatcher still has to read WHICH action is unavailable in order to know
+     what to do instead. The number to hold in mind is the unflattering one:
+     `--text-disabled` is 3.38:1 on `--surface-card`, but **2.90:1 light /
+     3.23:1 dark on `--surface-disabled`**, which is where a disabled `Button`'s
+     label actually sits. If a later change makes disabled text quieter, 2.90 is
+     the figure to argue against. `--border-disabled` is deliberately near
+     invisible (1.33–1.55 light, 1.44–1.46 dark): the fill and the label already
+     say "unavailable", and a boundary held to 3:1 would make the disabled
+     control the highest-contrast object in the form. A local `opacity-50` is a
+     review block — it fades label, border and focus ring together, by a factor
+     rather than to a measured value, landing wherever the surface puts it.
+   - **Selected:** `--surface-selected`, `--border-selected`. Three states that
+     look adjacent and are not — `--surface-tint` is a POINTER resting somewhere,
+     `--surface-brand-soft` is the active nav DESTINATION (a statement about
+     where you are), and this is what the operator CHOSE. `Select`'s option list
+     and `DateField`'s calendar used tint for all three, so hovering an
+     unselected option made it look chosen. Selected is one step darker than
+     tint in light and one step lighter in dark: a choice outranks a pointer, so
+     it has to survive being hovered.
+
+     **The fill is not the identifier, and must not become one.**
+     `--surface-selected` measures 1.31:1 on card in light and 1.17:1 in dark —
+     nowhere near the 3:1 that 1.4.11 asks of a boundary identifying a component
+     state, and raising it there would put a mid-grey bar through a table meant
+     to be read. `--border-selected` carries the requirement instead: it is
+     `--action-primary`, 3.53:1 light and 4.28:1 dark. So every consumer **must
+     also carry the state non-visually** — `aria-selected` or `aria-current` —
+     and `Select` additionally keeps a check mark, a font-weight and
+     `--text-brand`. **Nobody removes that check mark on the grounds that the
+     fill now exists.** The fill is the weakest of the four signals, not the
+     strongest; it is the same separation-versus-identification line the card
+     border is waived under in rule 6.
+13. **Six browser surfaces belong to the system now. Do not re-declare them, and
+   do not redraw the scrollbar.** `caret-color`, `scrollbar-color`,
+   `::selection`, `::placeholder`, `::marker`, and a link's underline offset are
+   all set once in `.e911-app` (1.7.0), out of tokens that already existed — the
+   block spends no new colour. It is not a cosmetic pass: Chrome's selection
+   band is `#3477F5` on a palette that contains no cool hue at all, so a
+   dispatcher dragging across a badge number to paste it into the CAD gets a
+   cobalt stripe over a warm-neutral table, which is the one moment the app
+   looks like an unstyled form. And a placeholder left at the browser's
+   `#9AA0A6` undoes half of what `--border-control` bought in 1.5.0, on the same
+   field, for the same operator at the same arm's length.
+   - A local `::selection`, `caret-color` or `::placeholder` rule in app code is
+     a review block, on the same grounds as a local focus ring (rule 7).
+   - So is `::-webkit-scrollbar` and its family, *even though it is the more
+     powerful API*. The system uses the standard two-value `scrollbar-color`
+     deliberately: the webkit pseudo-elements redraw the widget, which throws
+     away the platform's overlay behaviour, its touch expansion, and on a wall
+     tablet its hit area. Tinting a thumb and a track is theming; redrawing the
+     widget is shipping a different control.
+   - The base rule sets `::placeholder { opacity: 1 }` and that line is
+     load-bearing: Firefox ships the pseudo-element at 0.54, which would take
+     `--text-tertiary` from its audited 4.98:1 to roughly 2.6:1 — a tier raised
+     in 1.2.0 specifically to clear 4.5:1, silently undone by a UA default in
+     one browser.
 
 ## The layout pattern ("Terrazzo × Solstice")
 
@@ -181,9 +287,10 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 - **Canvas:** `--surface-dotgrid` over `--surface-canvas` (the dot-grid texture
   is a system signature — keep it).
 - **Page header:** the **ribbon** — `--ribbon-gradient`, `--ribbon-text`,
-  radius `--e911-radius-lg`, eyebrow (11px caps) + display headline + one-line
-  sub. Primary page actions live inside the ribbon, right-aligned
-  (white button = primary, ghost = secondary).
+  radius `--e911-radius-lg`, eyebrow (`--font-size-micro`, 10.5px caps) +
+  display headline (`--font-size-ribbon-h1`, 24px) + one-line sub
+  (`--font-size-ribbon-meta`). Primary page actions live inside the ribbon,
+  right-aligned (white button = primary, ghost = secondary).
 
   **Everything right-aligned goes in `actions`, including plain text.** That
   slot carries `--ribbon-actions-scrim`, and it exists because the gradient's
@@ -192,6 +299,24 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   record count dropped anywhere else on the ribbon fails AA at most window
   sizes. Size it with `text-ribbon-meta` — the same step `RibbonButton` uses, so
   app code never writes `text-[12.5px]` to line up with it.
+
+  **Why the ribbon keeps its eyebrow.** An external design review flagged it in
+  1.7.0 against a general rule that is usually right — *a kicker above a heading
+  is decoration, and a heading that needs one is a heading that has not been
+  written yet.* It is being KEPT, and the reasoning is recorded here for the
+  same reason the card-border asymmetry above is: so the next sweep reads the
+  argument instead of re-running it. **The shell's navigation is a 64px icon
+  rail with no breadcrumb, and it is collapsed by default.** The eyebrow is
+  therefore the only element on the page that names which of the six E911
+  domains the operator is standing in. The heading says "Pay Period 14"; the
+  eyebrow says "Approvals". That is wayfinding, and it is the wayfinding the
+  general rule assumes a breadcrumb is already providing.
+
+  It is kept **on a condition**, which is what makes this an exception rather
+  than an opinion: the eyebrow must carry what the collapsed rail cannot. An
+  eyebrow reading "APPROVALS" over a heading reading "Approvals" is the
+  decoration the review described, and at that point the general rule is right
+  and it should go.
 - **Cards:** `--surface-card`, border `--border-default`, radius
   `--e911-radius-md`, shadow `--shadow-card`, and a **4px colored top edge**
   keyed to domain: orange=operations, teal=roster/people, gold=certifications,
@@ -265,9 +390,44 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   forward `size` into its child props: `size` on an `<input>` is a real HTML
   attribute meaning width in characters, and `{...props}` would set it. Pass it
   to both.
-- **Tables:** 40px rows, `--surface-sunken` header with 11px caps labels,
-  row borders `--border-row`, mono for dates/IDs, cert codes as bordered
-  mono chips.
+- **Tables:** 40px rows, `--surface-sunken` header with `--font-size-micro`
+  (10.5px) caps labels, row borders `--border-row`, mono for dates/IDs, cert
+  codes as bordered mono chips.
+
+  **`DataTable` owns its own horizontal scroll, and the region is a named tab
+  stop** (1.7.0). Without it a wide table was not awkward, it was **clipped and
+  gone**: `DomainCard` sets `overflow-hidden` (it has to — a flush table would
+  otherwise square off the card's own corners), the table renders wider than the
+  card whenever its columns sum past it, and the header cells are
+  `whitespace-nowrap` so they cannot shrink to fit. On a 1024px wall tablet the
+  right-hand columns of a timecard were unreachable, with no scrollbar and no
+  cut edge to say anything was missing. Six screens in the first consuming app
+  had each wrapped the component in an `overflow-x` div of their own, which is
+  the system being asked for something six times and not answering.
+
+  So: **do not wrap a `DataTable` in your own `overflow-x-auto`** — that nests a
+  second scroller, and the outer one, which is the one the pointer actually
+  hits, is the unnamed unfocusable kind. **Pass `aria-label`.** It names the
+  table *and* the region, and `role="region"` with no accessible name is not
+  exposed as a landmark at all (the same trap `DomainCard`'s `<section>` was
+  in); the component falls back to the literal "Table" rather than going unnamed,
+  which tells a keyboard user only that they have landed on something. The
+  scroller takes `tabIndex={0}` because a container a pointer can pan and a
+  keyboard cannot is the same 2.1.1 failure this component already refuses to
+  let `onRowClick` commit. It draws **no** ring of its own; `tokens.css` has one.
+
+  **`loading` outranks `empty`, and `empty` now has a default** (1.7.0). The two
+  used to be one rendering: a table still fetching and a table with nothing in
+  it looked identical, so an operator on a slow link read "No exceptions" off a
+  queue that had forty and walked away. `loading` renders `loadingRows`
+  skeletons under a live header, so the column strip does not jump when the data
+  lands, and the empty state may not flash before it. And the old guard was
+  `rows.length === 0 && empty`, so a table that omitted the prop rendered a
+  header strip over a void — which reads as "still loading" or "the app is
+  broken", never as "there is nothing here". Every screen that forgot the prop
+  had that bug and none of them looked wrong in review, because the header made
+  the card look populated. The default is deliberately flat; pass an
+  `EmptyState` the moment you can say what is missing or what would end it.
 
   **A row that navigates uses `rowHref` + `renderLink`, never `onRowClick`
   alone.** `onRowClick` is a `<tr onClick>` — mouse-only, no tab stop, nothing
@@ -305,8 +465,121 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   Not calling it keeps the pre-1.5.0 behaviour exactly. Call it once per row —
   twice is two tab stops for one destination, and the component says so on the
   console.
-- **KPI cards:** label (11px caps, `--text-tertiary`) → display numeral
-  (`--font-size-kpi`, tabular) → sub-line with mono delta pill.
+- **KPI cards:** label (`--font-size-label`, 11px caps, `--text-tertiary`) →
+  display numeral (`--font-size-kpi`, tabular) → sub-line with mono delta pill.
+- **Type sizes: as of 1.7.0 every size the system paints has a name.** Seven
+  were added, and all seven were already shipping as `text-[Npx]` literals
+  *inside this package's own components* — 27 of them, across 8 components, at 9
+  distinct sizes that appeared nowhere in `tokens.css`. App code has been
+  forbidden from writing a raw size since 1.0.0; the package was doing it, which
+  meant a consumer could not name those sizes, could not override them, and
+  could not be linted against them.
+
+  | token | px | where it is painted |
+  |---|---|---|
+  | `--font-size-kpi` | 25 | KPI numeral (display 700, tabular) |
+  | `--font-size-ribbon-h1` | 24 | the ribbon's headline |
+  | `--font-size-h1` | 20 | the h1 on a page with **no** ribbon |
+  | `--font-size-h2` | 16 | section heading |
+  | `--font-size-h3` | 14.5 | card title |
+  | `--font-size-body` | 13.5 | prose, buttons, rail labels |
+  | `--font-size-control` | 13 | the value inside a form control |
+  | `--font-size-table` | 12.8 | table cell |
+  | `--font-size-ribbon-meta` | 12.5 | ribbon subtitle, `RibbonButton`, the actions slot |
+  | `--font-size-mono` | 12 | dates, IDs, deltas |
+  | `--font-size-ui-sm` | 12 | `Chip size="sm"`, `Tooltip`, toast action, calendar day |
+  | `--font-size-meta` | 11.5 | KPI sub-line, `FormField` hint and error |
+  | `--font-size-label` | 11 | KPI label, caps label |
+  | `--font-size-micro` | 10.5 | ribbon eyebrow, `DataTable` column header |
+  | `--font-size-badge` | 10 | `CertChip`, the KPI delta pill (mono) |
+  | `--font-size-seal` | 9 | the seal's "911" lockup — logotype, nothing else |
+
+  Utilities in both Tailwind ports: `text-micro`, `text-badge`, `text-meta`,
+  `text-ui-sm`, `text-control`, `text-ribbon-h1`, `text-seal`. **No rendered
+  pixel changed.** Naming and resizing are separate passes on purpose — whether
+  10.5 and 11 should be one size is a real argument and a *visual* change, and
+  it does not belong in the same commit as a rename.
+
+  **A correction this file owes you.** From 1.0.0 until 1.7.0 the two bullets
+  above said the ribbon eyebrow and the `DataTable` column header were "11px
+  caps". They are 10.5px, and always were: `scripts/contrast-audit.mjs` has
+  scored both at `px: 10.5` since the audit existed, so the instrument was right
+  the whole time the prose was wrong. Both mentions are fixed above. It is the
+  same failure mode this system has now recorded twice — a comment cannot fail a
+  build, so it drifts and the claim quietly becomes false (see the header of
+  `tokens.css`, and `--text-tertiary`'s old "labels ≥12px" annotation). Trust
+  the audit and the token file over any sentence in this document, including
+  this one.
+
+  **`--font-size-ribbon-h1` (24px) and `--font-size-h1` (20px) both exist, and
+  both are correct.** This is the one place in the system where two tokens
+  genuinely describe one HTML element. The ribbon is a painted band with its own
+  gradient and its own scrim, and its title is sized against *that band* rather
+  than against the page. `--font-size-h1` is for a page with no ribbon at all —
+  sign-in and the kiosk, which is exactly where its single consumer lives.
+  Before 1.7.0 the ribbon simply hard-coded 24px, so the system's stated "h1
+  size" was a size that 95% of its h1s did not use.
+- **Empty and loading are components** (1.7.0). `EmptyState` and `Skeleton` live
+  in `src/feedback.tsx`, which is the only module besides `contract.ts` with
+  **no `"use client"`** — neither holds state, takes a handler, or touches the
+  DOM, so a server page can render an empty state without a client wrapper
+  beside it.
+
+  ```jsx
+  <DataTable columns={cols} rows={rows} loading={pending} aria-label="Exception queue"
+    empty={<EmptyState
+      title="No exceptions in this pay period"
+      body="Punches are matched overnight, so today's exceptions appear tomorrow morning."
+      action={<Button onClick={clearFilters}>Clear filters</Button>}
+      icon={<Check size={18} />} />} />
+  ```
+
+  - `title` says **what is absent, in the operator's words and scoped to this
+    screen** — "No exceptions in this pay period", never "No data". A title that
+    could sit on any screen in the app tells the reader nothing about the one
+    they are on, and "No rows" collapses *an empty queue* and *a filter that
+    matched nothing* into one sentence when those need opposite responses.
+  - `body` says **why**, which is what makes an empty state teach instead of
+    apologise. `action` is **the thing that ends the state**; without one an
+    empty state is a dead end, and a dead end is where an operator starts
+    inventing a workaround. `icon` is decorative and rendered `aria-hidden`.
+  - **`EmptyState` renders no heading, at any rung** — deliberately. It almost
+    always sits inside a `DomainCard` that already owns one, and `titleLevel`
+    exists because the outline is the page's decision, not a component's. A
+    component that plants an `h3` wherever it lands re-opens that one card at a
+    time, and nothing shows it until someone runs the outline.
+  - `Skeleton` takes `size="text" | "row"` and gets its **width from
+    `className`** (`w-2/3`, `w-24`) — a width prop taking a CSS length is how
+    raw values get back into app code through a component that exists to keep
+    them out. It is always `aria-hidden`: a skeleton is a picture of content
+    that does not exist yet, and announcing it hands a screen-reader user a
+    table of blanks to walk. The loading state belongs on the container, as
+    `aria-busy` plus a `role="status"` — `DataTable` does both; an app
+    hand-rolling a skeleton layout owes the same.
+- **Motion is scoped by distance, not by importance.** Three durations, and the
+  choice between them is mechanical: `--e911-dur-fast` (110ms) for a hover or a
+  press, `--e911-dur` (170ms) for a colour change, and `--e911-dur-slow` (240ms,
+  new in 1.7.0) for anything that changes **size or position** — the rail
+  opening from 64px to 224px, a `Dialog` entering, a `Select` list unrolling.
+  Until 1.7.0 the 170ms step was carrying both, and those are not the same
+  movement: a colour swap reads as instant at 170ms, a 160px layout shift reads
+  as clipped. 240ms is the top of the band product UI can spend before an
+  operator mid-task starts *waiting for the interface*.
+
+  **Reduced motion is handled once, with one exception you must know about.**
+  `tokens.css` clamps every transition and animation under `.e911-app` to
+  0.01ms, including on the shell root itself, so do not re-implement it for
+  anything finite. It does **not** solve an *infinite* animation: a loop clamped
+  to 0.01ms keeps looping, so the browser samples it at an arbitrary point every
+  frame and the element strobes — faster motion than before the user asked for
+  less. Anything that repeats forever therefore also carries
+  `motion-reduce:animate-none` and must be legible parked at its resting style;
+  `Skeleton` is the system's one instance, and it rests as a fully opaque
+  `bg-tint` bar rather than vanishing into a blank card. `Skeleton`'s 2s pulse is
+  Tailwind's `animate-pulse` and deliberately **not** a token: the system's
+  durations top out at 240ms, a shimmer at 240ms is a strobe, and a token with
+  one consumer is how `--font-size-h1` ended up naming a size almost nothing
+  renders.
 
 ## Component recipes (Tailwind, using the preset)
 
@@ -319,10 +592,20 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 <section className="bg-card border border-line border-t-edge border-t-edge-gold
   rounded shadow-card p-4">
 
-// Status pill
+// Status pill — the word is not optional, at any of the five tones
 <span className="inline-flex items-center gap-1.5 h-[21px] px-2 rounded-pill
-  text-[11px] font-semibold bg-warn-soft text-warn">
+  text-label font-semibold bg-warn-soft text-warn">
   <i className="size-[5px] rounded-pill bg-current" />Due soon</span>
+// …and the two added in 1.7.0. `bg-info-soft text-info` · `bg-neutral-soft
+// text-neutral` — same geometry, same dot, same word. Before reaching for
+// neutral, read rule 4: if the label reads the same with no pill, use no pill.
+
+// Disabled control — the tokens, not an opacity of your own (rule 12)
+<button disabled className="h-ctl px-3.5 rounded-sm bg-disabled text-disabled-fg
+  border border-line-disabled font-semibold text-body">
+
+// Selected row / option — outranks hover, so it survives being hovered
+<li aria-selected className="bg-selected border-l-2 border-line-selected">
 
 // KPI numeral
 <b className="font-display text-kpi tabular-nums">94.6%</b>
@@ -342,6 +625,33 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   `Radio`. Reaching for `xs` on a chip, an input or a card is the block; new
   fonts of any kind
 - Status conveyed by color only; non-tabular digits in any numeric column
+- A `neutral` pill on a label that reads identically without one — that is no
+  pill, not a quiet pill (rule 4). Likewise a tone picked because none of the
+  other four fitted: `neutral` means "known, and carries no judgement", never
+  "undecided"
+- A raw `text-[Npx]` anywhere, now including **inside this package** — every
+  size the system paints has a token as of 1.7.0, and a literal is how 12.5px
+  ended up written in eight places and 10.5px documented as 11px for seven
+  versions
+- A disabled state built from `opacity-*` or a grey of your own instead of
+  `--surface-disabled` / `--text-disabled` / `--border-disabled` (rule 12); and
+  `--surface-tint` used for a *selected* row, option or day, which makes hover
+  and choice the same colour
+- A local `::selection`, `caret-color` or `::placeholder` rule, or a scrollbar
+  redrawn with `::-webkit-scrollbar` instead of tinted with `scrollbar-color`
+  (rule 13)
+- A `DataTable` inside your own `overflow-x-auto` wrapper — the component owns a
+  named, focusable scroll region, and wrapping it nests a second scroller that
+  has neither. A `DataTable` with no `aria-label` is the same block: the region
+  then announces itself as "Table"
+- A blank card while data loads, or an empty state that says "No data" / "No
+  rows" — use `Skeleton` and an `EmptyState` whose title says *which* emptiness
+  this is, on *this* screen, and whose `action` can end it
+- Something that changes size or position animated on `--e911-dur` (170ms)
+  rather than `--e911-dur-slow`; a local `prefers-reduced-motion` block for a
+  finite transition, which `tokens.css` already handles; or an **infinite**
+  animation *without* `motion-reduce:animate-none`, which the global clamp turns
+  into a strobe rather than stopping
 - A form control drawn on `--border-default` (that tier separates; controls are
   identified by `--border-control`, which is the one held to 3:1)
 - A control raised to finger size with a height utility instead of `size="tap"`,

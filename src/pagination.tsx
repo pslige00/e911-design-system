@@ -75,8 +75,24 @@ export function Pagination({
 
   const stepClass = cn(
     "inline-flex h-tap items-center gap-1 rounded-sm border-chip border-line bg-card px-2.5",
-    "text-[12.5px] font-medium text-ink transition duration-fast ease-e911",
-    "hover:bg-tint disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-card"
+    "text-ribbon-meta font-medium text-ink transition duration-fast ease-e911",
+    "hover:bg-tint",
+    // The shared disabled tokens, not the `opacity-45` this control invented
+    // for itself. Opacity is exactly the drift 1.7.0's disabled tier exists to
+    // end: it is a blend factor, not a colour, so nothing measures it and it
+    // lands wherever the surface underneath happens to be — which is why Button,
+    // Select and DateField each ended up with a different disabled grey. It also
+    // fades the label, the 1.5px chip border and the chevron by one factor, so
+    // the whole arrow recedes together and a dispatcher at arm's length on a
+    // wall tablet cannot read WHICH direction is unavailable. --text-disabled is
+    // picked to stay legible (3.38:1 light / 3.27:1 dark on card) while reading
+    // as off.
+    //
+    // `disabled:hover:` is load-bearing too: :hover still matches a disabled
+    // button, so without it hover:bg-tint repaints the arrow under the finger
+    // and it reads as clickable.
+    "disabled:cursor-not-allowed disabled:border-line-disabled disabled:bg-disabled",
+    "disabled:text-disabled-fg disabled:hover:bg-disabled"
   );
 
   return (
@@ -116,7 +132,7 @@ export function Pagination({
                   "grid h-tap min-w-tap place-items-center rounded-sm border-chip px-2",
                   // Mono + tabular so the numbers hold their column as they
                   // widen from 9 to 10 to 100.
-                  "font-mono text-[12.5px] tabular-nums transition duration-fast ease-e911",
+                  "font-mono text-ribbon-meta tabular-nums transition duration-fast ease-e911",
                   slot === page
                     ? "border-action bg-brand-soft font-semibold text-brand-text"
                     : "border-line bg-card text-muted hover:bg-tint hover:text-ink"

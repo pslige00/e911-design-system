@@ -75,6 +75,34 @@ const buttonVariant: Record<ButtonVariant, string> = {
   danger: "bg-bad text-bad-fg font-semibold hover:brightness-95",
 };
 
+/**
+ * One disabled treatment for all four variants (1.7.0). Before it, Button,
+ * Select and DateField each reached for `opacity-45` independently. They agreed
+ * only by coincidence, and nothing in the system would have noticed if one of
+ * them stopped — that is the drift the disabled tokens exist to end.
+ *
+ * Opacity was also the wrong instrument: it fades the LABEL as hard as the fill.
+ * WCAG 1.4.3 exempts a disabled control from the contrast floor, but a
+ * dispatcher still has to read WHICH action is unavailable to know what to do
+ * instead — Approve greyed out and Reject greyed out are not the same screen.
+ * --text-disabled is measured for that: 3.38:1 on card in light, 3.27:1 in dark.
+ *
+ * `disabled:border-line-disabled` is inert on the three variants that paint no
+ * border, and load-bearing on `secondary`, which would otherwise keep
+ * --border-strong around a dead control.
+ *
+ * The `disabled:hover:` half is not redundant. A disabled <button> still matches
+ * :hover in Chrome, and `disabled:bg-disabled` ties with the variant's
+ * `hover:bg-action-hover` on specificity — the winner would be whichever variant
+ * Tailwind emits last, which is not something this file should depend on. The
+ * compound variant outranks it outright, so a disabled button does not light up
+ * under the pointer.
+ */
+const buttonDisabled =
+  "disabled:cursor-not-allowed disabled:bg-disabled disabled:text-disabled-fg " +
+  "disabled:border-line-disabled disabled:hover:bg-disabled " +
+  "disabled:hover:text-disabled-fg disabled:hover:brightness-100";
+
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = "primary", size = "md", className, type, ...rest }, ref) => (
     <button
@@ -83,11 +111,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       className={cn(
         "inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
         "rounded-sm text-body transition duration-fast ease-e911",
-        "disabled:opacity-45 disabled:cursor-not-allowed",
+        buttonDisabled,
         CONTROL_HEIGHT[size],
         // Padding follows the height so the label keeps its optical margins;
         // only `sm` also steps the type down, which it did before 1.5.0 too.
-        size === "sm" ? "px-2.5 text-[12px]" : size === "tap" ? "px-4" : "px-3.5",
+        size === "sm" ? "px-2.5 text-ui-sm" : size === "tap" ? "px-4" : "px-3.5",
         buttonVariant[variant],
         className
       )}
@@ -119,7 +147,7 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
       className={cn(
         CONTROL_HEIGHT[size],
         size === "tap" ? "px-4" : "px-3",
-        "rounded-sm border-chip text-[12px] transition duration-fast ease-e911",
+        "rounded-sm border-chip text-ui-sm transition duration-fast ease-e911",
         active
           ? "border-action bg-brand-soft text-brand-text font-semibold"
           : "border-line bg-card text-muted font-medium hover:text-ink",
@@ -137,10 +165,20 @@ export interface StatusTagProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode; // the word is REQUIRED: pill + dot + word, never color alone
 }
 
+/**
+ * Every tone gets a soft fill and its own text colour, and none of them is
+ * allowed to be the whole message. All five light-theme text colours sit inside
+ * a 0.018 luminance band, so to a dichromat — or to anyone reading a dim wall
+ * tablet from across the room — this Record produces five shades of one grey.
+ * The dot and the word below are what actually distinguish them; the fill only
+ * agrees with the word once it has been read. See Tone in contract.ts.
+ */
 const tagTone: Record<Tone, string> = {
   ok: "bg-ok-soft text-ok",
   warn: "bg-warn-soft text-warn",
   bad: "bg-bad-soft text-bad",
+  info: "bg-info-soft text-info",
+  neutral: "bg-neutral-soft text-neutral",
 };
 
 export function StatusTag({ tone, children, className, ...rest }: StatusTagProps) {
@@ -148,7 +186,7 @@ export function StatusTag({ tone, children, className, ...rest }: StatusTagProps
     <span
       className={cn(
         "inline-flex items-center gap-1.5 h-[21px] px-2 rounded-pill",
-        "text-[11px] font-semibold",
+        "text-tag font-semibold",
         tagTone[tone],
         className
       )}
@@ -162,15 +200,28 @@ export function StatusTag({ tone, children, className, ...rest }: StatusTagProps
 
 /* --------------------------------------------------------------- CertChip */
 export interface CertChipProps extends React.HTMLAttributes<HTMLSpanElement> {
-  tone?: Tone | "neutral";
+  // Was `Tone | "neutral"` until 1.7.0, when neutral joined Tone itself. Left
+  // spelled out, the union would quietly stay a THREE-tone one plus neutral —
+  // `info` would never be offered here, and the cert chip would be the one
+  // component in the system whose tone means something narrower than Tone.
+  tone?: Tone;
   children: React.ReactNode; // e.g. "EMD", "CPR 21d"
 }
 
-const certTone: Record<NonNullable<CertChipProps["tone"]>, string> = {
+/**
+ * A cert chip is a code, not a status pill: it has no dot and no tone word, so
+ * the fill is the only thing colour says here. That is why only the tones that
+ * are asking to be READ get one — `ok` and `neutral` stay a plain outline,
+ * because a certification that is simply current does not need to compete with
+ * the one expiring in 21 days sitting next to it. Fill every tone and the row
+ * goes back to being uniformly loud, which is what the outline is protecting.
+ */
+const certTone: Record<Tone, string> = {
   neutral: "border-line text-muted",
   ok: "border-line text-muted",
   warn: "border-warn bg-warn-soft text-warn",
   bad: "border-bad bg-bad-soft text-bad",
+  info: "border-info bg-info-soft text-info",
 };
 
 /** Mono chip for certification codes / IDs. */
@@ -179,7 +230,7 @@ export function CertChip({ tone = "neutral", children, className, ...rest }: Cer
     <span
       className={cn(
         "inline-flex items-center h-5 px-1.5 rounded-[6px] border-chip",
-        "font-mono text-[10px] tabular-nums",
+        "font-mono text-badge tabular-nums",
         certTone[tone],
         className
       )}
