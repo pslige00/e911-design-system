@@ -83,6 +83,18 @@ export function DomainCard({
         "min-w-0 overflow-hidden rounded-md border border-line bg-card shadow-card",
         "border-t-edge", // 4px top border width
         edgeClass[edge],
+        // Not a style — a SIGNAL to tokens.css that this box clips its
+        // children, so every focusable inside must draw its indicator inward
+        // instead of outward (1.8.0). The global indicator reaches 7px outside
+        // a control's border box; `overflow-hidden` above removes all of it on
+        // an edge a control sits flush against, with no error and nothing to
+        // see. CSS cannot detect "my indicator would be clipped", so the
+        // clipping container has to say so.
+        //
+        // Only when `flush`: a padded card gives 16px against a 7px reach, and
+        // scoping this to the case that actually clips keeps the default
+        // outward indicator wherever it still fits. See tokens.css.
+        flush && "e911-card-flush",
         className
       )}
       {...sectionRest}
@@ -131,19 +143,28 @@ export function KpiCard({ edge, label, value, delta, sub, className }: KpiCardPr
           {delta ? (
             <span
               className={cn(
-                // rounded-[6px] is the ONE undeclared radius left in this file,
-                // and it stays until a token exists — deliberately, not by
-                // oversight. The system declares four (xs 5 / sm 8 / md 10 /
-                // lg 14) plus pill. `xs` is scoped by name AND by comment in
-                // tokens.css to the box of a Checkbox ("a chip, an input or a
-                // card that reaches for it is a review block"), so this badge
-                // may not take it. `sm` is 8px on a ~15px-tall pill, which the
-                // browser clamps to half the height and paints as a stadium —
-                // that is a StatusTag's shape, and this is not a status. It
-                // would also desync from CertChip in core.tsx, which is the
-                // same badge at the same 6px. Both call sites move together or
-                // neither does. See the 1.7.0 report.
-                "rounded-[6px] px-1.5 py-px font-mono text-badge font-medium",
+                // `rounded-xs` (1.8.0). This was a 6px arbitrary radius — the
+                // last one the package drew without declaring — and the note
+                // here said it stayed "until a token exists". 1.8.0 is that
+                // token, arrived at by widening the scope of one rather than
+                // minting a fifth: --e911-radius-xs is no longer "the Checkbox
+                // box", it is any painted box 20px or under on its short side,
+                // which is what the scope always meant. This pill is ~17px
+                // tall, so 5px is 29% of it — inside the 25-29% band every
+                // corner in the system sits in, where 6px was 35%. `sm` is
+                // still unavailable: 8px here is clamped by the browser to half
+                // the height and paints as a stadium, which is a StatusTag's
+                // shape, and this is not a status.
+                //
+                // MUST stay in step with CertChip in core.tsx, which is the
+                // same badge at the same radius and moved in the same commit.
+                //
+                // The old note spelled the arbitrary utility out in prose, and
+                // that alone kept a live 6px rule in the compiled CSS: Tailwind
+                // scans source as raw TEXT and does not know what a comment is.
+                // Do not write a bracketed utility in a comment in this repo,
+                // even to say you are removing it.
+                "rounded-xs px-1.5 py-px font-mono text-badge font-medium",
                 delta.direction === "up" && "bg-ok-soft text-ok",
                 delta.direction === "down" && "bg-bad-soft text-bad",
                 delta.direction === "flat" && "bg-tint text-muted"
@@ -591,8 +612,18 @@ export function FormField({ id, label, hint, error, size = "md", children }: For
           CONTROL_HEIGHT[size],
           size === "tap" ? "px-3" : "px-2.5",
           "rounded-sm border-chip bg-card text-control text-ink",
-          "focus:outline-none focus:border-[var(--focus-ring)]",
-          "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
+          // NO FOCUS TREATMENT HERE — the same removal as select.tsx and
+          // date-field.tsx, and the worst-placed of the three: this string is
+          // HANDED TO THE APP and spread onto whatever control it renders, so
+          // the outline-suppressing half travelled out of this package and onto
+          // every consumer's own inputs, textareas and selects. It was inert only
+          // because `.e911-app :focus-visible` in tokens.css is UNLAYERED and
+          // therefore outranks a utility; layer that rule, or let an app declare
+          // its own @layer order, and every FormField control in every E911 app
+          // loses its keyboard focus indicator at once (WCAG 2.4.7) with no
+          // error to say so. The system draws one two-tone indicator; a field
+          // does not get a second, and does not get to suppress the first.
+          //
           // --border-control, not --border-default: a field's stroke is the only
           // thing marking it (bg-card input inside a bg-card card), so 1.4.11
           // wants 3:1 there and 1.31:1 was what shipped. See tokens.css.

@@ -289,7 +289,9 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 - **Page header:** the **ribbon** — `--ribbon-gradient`, `--ribbon-text`,
   radius `--e911-radius-lg`, eyebrow (`--font-size-micro`, 10.5px caps) +
   display headline (`--font-size-ribbon-h1`, 24px) + one-line sub
-  (`--font-size-ribbon-meta`). Primary page actions live inside the ribbon,
+  (`--font-size-body-sm`, 12.5px — this was `--font-size-ribbon-meta` until
+  1.8.0; see the type-scale section for why the ribbon does not own that size).
+  Primary page actions live inside the ribbon,
   right-aligned (white button = primary, ghost = secondary).
 
   **Everything right-aligned goes in `actions`, including plain text.** That
@@ -297,8 +299,8 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   gold end is 2.4:1 against `--ribbon-text`: measured across 1024/1440/1920px,
   ribbon text holds 4.5:1 only to about 55% of the width. A freshness stamp or a
   record count dropped anywhere else on the ribbon fails AA at most window
-  sizes. Size it with `text-ribbon-meta` — the same step `RibbonButton` uses, so
-  app code never writes `text-[12.5px]` to line up with it.
+  sizes. Size it with `text-body-sm` — the same step `RibbonButton` uses, so app
+  code never writes a raw 12.5px literal to line up with it.
 
   **Why the ribbon keeps its eyebrow.** An external design review flagged it in
   1.7.0 against a general rule that is usually right — *a kicker above a heading
@@ -477,6 +479,8 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 
   | token | px | where it is painted |
   |---|---|---|
+  | `--font-size-glance` | 64 | the value a distance-read surface exists to show |
+  | `--font-size-glance-sm` | 28 | the one line of text beside it, same distance |
   | `--font-size-kpi` | 25 | KPI numeral (display 700, tabular) |
   | `--font-size-ribbon-h1` | 24 | the ribbon's headline |
   | `--font-size-h1` | 20 | the h1 on a page with **no** ribbon |
@@ -485,7 +489,7 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   | `--font-size-body` | 13.5 | prose, buttons, rail labels |
   | `--font-size-control` | 13 | the value inside a form control |
   | `--font-size-table` | 12.8 | table cell |
-  | `--font-size-ribbon-meta` | 12.5 | ribbon subtitle, `RibbonButton`, the actions slot |
+  | `--font-size-body-sm` | 12.5 | supporting prose, field labels, empty rows, ribbon subtitle |
   | `--font-size-mono` | 12 | dates, IDs, deltas |
   | `--font-size-ui-sm` | 12 | `Chip size="sm"`, `Tooltip`, toast action, calendar day |
   | `--font-size-meta` | 11.5 | KPI sub-line, `FormField` hint and error |
@@ -499,6 +503,51 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   pixel changed.** Naming and resizing are separate passes on purpose — whether
   10.5 and 11 should be one size is a real argument and a *visual* change, and
   it does not belong in the same commit as a rename.
+
+  **1.8.0 — the tier the scale stopped short of.** Everything from `kpi` down is
+  *desk density*: a number on a card, on a machine at arm's length. A kiosk is
+  not that surface, and the first consuming app proved it by **refusing** the
+  scale rather than bending it — its wall clock and its punch confirmation were
+  both raw literals, because 25px on a tablet bolted to a wall is a number an
+  operator crossing the room cannot read. `text-glance` and `text-glance-sm` are
+  those two sizes.
+
+  Name them by the reading **condition**, not the mounting and not the device,
+  so a pedestal kiosk, a wall board of who is on the floor, and a shift-change
+  display all reach for the same two names. `glance` here does *not* mean "a
+  summary at a glance" — that is a `KpiCard`. Neither token declares a
+  line-height: the two literals they replace carry *different* leading at their
+  only call sites, so a token value would be silently wrong at one of them.
+
+  There is deliberately **no third token for a control label**, even though the
+  same kiosk sets its 64–80px buttons at three hand-tuned sizes. A control's
+  label size belongs to the control, and this system already has the mechanism:
+  `size="sm"` steps the type down with the height, while `size="tap"` does not,
+  because tap is about what a finger can hit and not about what an eye can read.
+  A wall-distance control is about both — so it is a `ControlSize`, which
+  carries height, padding and type as one decision, not a loose type token every
+  author has to remember to pair with a tall button.
+
+  **1.8.0 — `--font-size-ribbon-meta` is now `--font-size-body-sm`.** 12.5px was
+  named in 1.4.0 after the first three places it appeared, which happened to be
+  the ribbon's subtitle and its buttons. It is the most-used size in the first
+  consuming app — 115 sites across 19 files — and **not one of those 19 files
+  renders a `Ribbon`**. Inside this package only 2 of 10 uses are the ribbon; in
+  `spec.html`, 4 of 22. The name has been wrong since it was written, and a
+  sweep against the old one would have put the word `ribbon` on 115 table rows
+  and field hints.
+
+  The old spelling stays live as a **deprecated alias** — `--font-size-ribbon-meta`
+  now resolves to `--font-size-body-sm`, and `text-ribbon-meta` still works in
+  both Tailwind ports. Same 12.5px, same 1.35 leading: a rename must not resize.
+  Removable in 2.0.0, once no source here and no consuming app names it; grep
+  for the **utility** spelling as well as the custom property, because the class
+  is what app code actually writes.
+
+  Against `--font-size-ui-sm` (12px), the only token this can be confused with:
+  `ui-sm` is text **inside a piece of chrome that has its own box** — a `Chip`,
+  a `Tooltip`, a toast action, a calendar day. `body-sm` is the page's own small
+  text: the paragraph, the field label, the empty row, the subtitle.
 
   **A correction this file owes you.** From 1.0.0 until 1.7.0 the two bullets
   above said the ribbon eyebrow and the `DataTable` column header were "11px
@@ -556,6 +605,87 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
     table of blanks to walk. The loading state belongs on the container, as
     `aria-busy` plus a `role="status"` — `DataTable` does both; an app
     hand-rolling a skeleton layout owes the same.
+- **The inline message is a component** (1.8.0). `Callout` lives in
+  `src/callout.tsx`, which like `feedback.tsx` carries **no `"use client"`** — a
+  server page can render a standing notice with no client wrapper beside it.
+
+  ```jsx
+  <Callout tone="bad" kind="event" id="sign-in-error">{state.error}</Callout>
+
+  <Callout tone="warn" title="29 CFR 778.105">
+    A fortnight that straddles the workweek boundary is two workweeks for overtime.
+  </Callout>
+  ```
+
+  It exists because the first consuming app hand-painted this shape in six files
+  from one class string
+  (`rounded-sm bg-{tone}-soft px-3 py-2 text-body text-{tone}`), some drawing a
+  border and some not, because nothing said which was right — the `DataTable`
+  scroll region again. Most of them announced nothing at all, so a dispatcher on
+  a screen reader was told nothing when a warning appeared in front of them.
+
+  **No count is given here on purpose.** Two attempts to state one were wrong
+  within the hour: the first grepped `bg-*-soft` and counted a CLASS rather than
+  a message, sweeping up tone→class lookup arrays and `aria-hidden` legend
+  swatches; the second was accurate when written and stale two commits later.
+  **A soft fill is not a callout. A soft fill WITH padding, rendering children,
+  not `aria-hidden`, is.** Re-derive from that rule at the moment you need the
+  number, and do not write the answer down here.
+  - **`kind` says what the message IS, not how it looks** — `tone` is the only
+    thing that changes a Callout's appearance. `"standing"` (the default) is part
+    of the page as rendered: "This pay period is closed", "Coverage below minimum
+    is computed from the posted roster". `"event"` is news: a credential refused,
+    a punch the server rejected, a save that failed. Only `"event"` is announced,
+    and `tone` still decides how loudly — `bad` interrupts (`role="alert"`), the
+    rest wait (`role="status"`).
+  - **Why the component cannot work this out, and why `Toast` can.**
+    `role="alert"` fires when the node MOUNTS, so a standing note marked as an
+    event interrupts a screen-reader user on every page load — seven times on one
+    screen in the first app — and the operator's defence is to tune the channel
+    out. A channel nobody trusts is worse than a quiet one, because the quiet one
+    can still be fixed. Tone cannot settle it either: "This pay period is closed"
+    and "Your punch was rejected" are both `bad`. A toast is ALWAYS new, which is
+    the whole reason `toast.tsx` may derive its live region from tone alone. The
+    default here is silence: **it costs one message, where the other default
+    costs the channel.**
+  - **A Callout carries a mark, and the mark is a SHAPE** — `warn` is the only
+    triangle; the four circles differ by a check, a cross, an i and a dash. Five
+    tone colours inside a 0.018 luminance band do not distinguish a tinted panel
+    (rule 4), and a Callout's "word" is its own content, which the component does
+    not supply. The mark is `aria-hidden` and deliberately not overridable; a
+    screen reader hears "Error:", "Warning:", "Success:", "Note:" instead.
+    `neutral` gets no word, because it names no severity.
+  - **Pass `id` when the Callout explains a refused field**, and point that
+    field's `aria-describedby` at it. Sign-in is the pattern: it moves focus to
+    the first invalid input and describes it with the same node, so the sentence
+    is read on arrival — which also covers an alert that fired before the
+    assistive technology was listening. It has to, because **a live region
+    announces a CHANGE**: submit twice, get the identical refusal, and the node
+    never remounts and its text never moves, so the second attempt is silent.
+    Move focus, or re-key the Callout.
+  - `title` is emphasised text, **not a heading at any rung** — same reason as
+    `EmptyState`. `action` is the thing that ends the state. Body text sits in the
+    **tone colour**, as `FormField`'s error line does; ink on a soft fill is a
+    pair `scripts/contrast-audit.mjs` does not measure.
+  - **Known limit, and the sanctioned way out.** Urgency derives from `tone`, so
+    `warn` + interrupting (a session-timeout countdown, a dropped live feed —
+    caution by tone, but the operator is not looking) and `bad` + polite cannot
+    be expressed today. Nothing in the first app needed either. When one appears,
+    add a **third value to `kind`** — widening the union is additive and changes
+    no call site. Do NOT add an `aria-live` prop, and do not set one at a call
+    site: that is a second API for the same question, and the two will disagree.
+
+    Two consumers have now hit this from opposite directions: one needed `warn`
+    that interrupts, the other needed an `event` that must NOT interrupt — a
+    preview that fires 350 ms after mount, reporting facts that predate the
+    operator on its first appearance and genuine news on every later one, from
+    the same element at the same call site. So the missing axis is not another
+    `kind` value: there are three independent facts here — *is it new* (`kind`),
+    *how urgent* (`tone`), and *may it interrupt* (currently derived from tone,
+    which is the conflation). The fix is one optional politeness override. It is
+    deliberately **not** in 1.8.0: two consumers hitting it from opposite ends is
+    exactly enough evidence to design it properly and not enough to design it in
+    a hurry.
 - **Motion is scoped by distance, not by importance.** Three durations, and the
   choice between them is mechanical: `--e911-dur-fast` (110ms) for a hover or a
   press, `--e911-dur` (170ms) for a colour change, and `--e911-dur-slow` (240ms,
@@ -593,9 +723,16 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   rounded shadow-card p-4">
 
 // Status pill — the word is not optional, at any of the five tones
-<span className="inline-flex items-center gap-1.5 h-[21px] px-2 rounded-pill
-  text-label font-semibold bg-warn-soft text-warn">
-  <i className="size-[5px] rounded-pill bg-current" />Due soon</span>
+<span className="inline-flex items-center gap-1.5 h-tag px-2 rounded-pill
+  text-tag font-semibold bg-warn-soft text-warn">
+  <i className="size-tag-dot rounded-pill bg-current" />Due soon</span>
+// `h-tag`, `size-tag-dot` and `text-tag`, not the 21px, 5px and text-label
+// this recipe printed until 1.8.0. This block is WHY the first two were
+// tokenised: a recipe gets copied, so a literal here is a literal in every app
+// that ever needed the shape in a slot no component fits. (`text-label` was
+// simply wrong from 1.7.0 — it is the caps micro-label and carries +0.05em,
+// which spaces out a short word in a small pill. `StatusTag` has always used
+// `text-tag`; this line had not caught up.)
 // …and the two added in 1.7.0. `bg-info-soft text-info` · `bg-neutral-soft
 // text-neutral` — same geometry, same dot, same word. Before reaching for
 // neutral, read rule 4: if the label reads the same with no pill, use no pill.
@@ -620,10 +757,18 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   about the pin, the tap targets, or the overlay rule
 - More than one ribbon per page; shadows deeper than `--shadow-pop`; radii other
   than the four tokens — `--e911-radius-sm` / `-md` / `-lg` plus the pill, and
-  `--e911-radius-xs` (5px, added 1.6.0), which belongs to the `Checkbox` box and
-  nothing else: 8px on an 18px square reads as a circle and collides with
-  `Radio`. Reaching for `xs` on a chip, an input or a card is the block; new
-  fonts of any kind
+  `--e911-radius-xs` (5px, added 1.6.0), the **small-box corner**: any painted
+  box whose short side is **20px or less**, which today means the `Checkbox`
+  box, `CertChip`, and the `KpiCard` delta pill. Reaching for `xs` on a chip
+  (28px), an input (32px) or a card is still the block — the scope is the
+  number, not the component list, and anything 24px or over takes `sm`. The
+  scope is a ratio: every corner in the system is 25–29% of its box's short
+  side, which is why 8px on an 18px checkbox reads as a circle beside a `Radio`
+  (44%) and why 8px on a 17px delta pill is clamped by the browser into a
+  stadium — a `StatusTag`'s shape, on something that is not a status. 6px
+  (30–35%) was the value both badges drew until 1.8.0; it is also Tailwind's own
+  default `rounded-md`, i.e. the framework's number rather than a decision this
+  system could defend; new fonts of any kind
 - Status conveyed by color only; non-tabular digits in any numeric column
 - A `neutral` pill on a label that reads identically without one — that is no
   pill, not a quiet pill (rule 4). Likewise a tone picked because none of the
@@ -632,7 +777,17 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 - A raw `text-[Npx]` anywhere, now including **inside this package** — every
   size the system paints has a token as of 1.7.0, and a literal is how 12.5px
   ended up written in eight places and 10.5px documented as 11px for seven
-  versions
+  versions. **1.8.0 did the same for metrics**: `h-[21px]`, `size-[5px]`,
+  `h-[33px]` and `rounded-[6px]` are now `h-tag`, `size-tag-dot`, `h-ctl` and
+  `rounded-xs`, and app code owes the same discipline for any height, radius or
+  box the system already names
+- **Two raw metrics remain in this package on purpose, and a sweep must not
+  "fix" them**: the seal's `size-[30px]` and the ribbon's glow disc
+  (`-right-[60px] -top-[80px] size-[240px]`). Both are artwork, not metrics —
+  the first is a logotype's geometry, the second is one shape whose three
+  numbers are meaningless apart. Neither has a second consumer, and a token
+  with one consumer is how `--font-size-h1` came to name a size almost nothing
+  renders. Both carry a comment at the call site saying so
 - A disabled state built from `opacity-*` or a grey of your own instead of
   `--surface-disabled` / `--text-disabled` / `--border-disabled` (rule 12); and
   `--surface-tint` used for a *selected* row, option or day, which makes hover
@@ -644,6 +799,12 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   named, focusable scroll region, and wrapping it nests a second scroller that
   has neither. A `DataTable` with no `aria-label` is the same block: the region
   then announces itself as "Table"
+- A hand-rolled inline message — a `bg-*-soft` panel with prose in it, with or
+  without a border. Use `Callout`; it is the same block as a hand-rolled pill,
+  and the reason is the 22 that shipped without announcing anything
+- `kind="event"` on a message that was already true when the page rendered. An
+  alert per page load teaches operators to ignore the channel, which is the one
+  failure that cannot be fixed by fixing the next screen
 - A blank card while data loads, or an empty state that says "No data" / "No
   rows" — use `Skeleton` and an `EmptyState` whose title says *which* emptiness
   this is, on *this* screen, and whose `action` can end it

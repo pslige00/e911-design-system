@@ -20,6 +20,23 @@
    were living as text-[Npx] literals inside this package's own components.
    Additive only, again: not one existing value in this file moved, so every
    screen built against 1.6.0 renders identically.
+   1.8.0 (2026-08-16): the METRIC follow-up to 1.7.0's naming pass. Two new
+   metrics (--tag-height, --tag-dot-size), and --e911-radius-xs's scope widened
+   from the Checkbox box to every painted box 20px or under — which retires 6px,
+   the last radius this package drew that it had never declared. Plus the two
+   findings that came back from measuring a consuming app against the 1.7.0
+   scale: the tier the scale stopped short of (--font-size-glance and
+   --font-size-glance-sm, for a surface read from across a room), and
+   --font-size-ribbon-meta renamed to --font-size-body-sm because 115 of its 115
+   uses in that app are in files containing no Ribbon at all. The old name stays
+   live as an alias in all three ports, so the rename moves nothing.
+
+   Read this one differently from 1.6.0 and 1.7.0: it is NOT additive-only, and
+   it does move pixels. Two badges lose 1px of corner and RibbonButton loses 1px
+   of height. No existing value in this file changed — the scope of one did, and
+   two components stopped drawing numbers this file never named. A renamed
+   literal is a naming commit; a resized one is not, which is why 1.7.0 left
+   these alone rather than smuggling them in under "nothing renders differently".
 
    THE RULE: application code uses TIER 2 (semantic) names only.
    Tier 1 primitives exist so Tier 2 has something to point at.
@@ -119,9 +136,38 @@
      pill and reads correctly there. On an 18px square it is 44% of the side —
      the box comes out a squircle, and a squircle beside a Radio's circle is two
      controls a dispatcher has to look twice at. 5px keeps the same corner
-     LANGUAGE at a quarter of the area. Scoped by name and by comment to that
-     box; a chip, an input or a card that reaches for it is a review block. */
-  --e911-radius-xs: 5px;    /* Checkbox box only            */
+     LANGUAGE at a quarter of the area.
+
+     WIDENED IN 1.8.0 from "the Checkbox box" to "any painted box whose short
+     side is 20px or less" — as of 1.8.0 that is the Checkbox box, CertChip, and
+     the KpiCard delta pill. The old scope was never really about checkboxes. It
+     was a stand-in for SMALL, written when the box was the only sub-28px thing
+     the system painted, and the paragraph above argues a RATIO, not a component:
+
+       Chip           8px on 28px = 29%
+       Button         8px on 32px = 25%
+       Checkbox box   5px on 18px = 28%
+       CertChip       5px on 20px = 25%   (was 6px = 30%)
+       delta pill     5px on 17px = 29%   (was 6px = 35%)
+
+     One corner language, 25-29% of the short side, holding across a 14px range.
+     6px sat outside it at both badges, and it was a fifth radius no consumer
+     could name or override — the same defect as RibbonButton's 9px, which 1.7.0
+     deleted for the same reason. Neither sanctioned neighbour was available:
+     `sm` is 8px on a 17px pill, which the browser clamps to half the height and
+     paints as a stadium, and a stadium is the StatusTag's shape.
+
+     CertChip is not merely "small enough" to qualify. It is a 1.5px border-chip
+     stroke around a 20px box; the Checkbox box is the same stroke around an
+     18px box. Same drawing, 2px taller, stretched for a code. Drawing those two
+     at 6px and 5px in one form is the squircle-beside-a-circle problem this
+     token was minted to end, arriving from the other side.
+
+     STILL A REVIEW BLOCK on a chip (28px), an input (32px) or a card: 5px there
+     is 15-18% and reads visibly sharper than everything around it. The NUMBER
+     in the scope does the work, not the list of components — anything with a
+     short side of 24px or more takes `sm`. */
+  --e911-radius-xs: 5px;    /* boxes <= 20px: Checkbox, CertChip, delta pill */
   --e911-radius-sm: 8px;    /* chips, inputs, rail buttons  */
   --e911-radius-md: 10px;   /* cards                        */
   --e911-radius-lg: 14px;   /* ribbon, dialogs              */
@@ -434,6 +480,30 @@
   --check-size: 18px;
   --check-size-tap: 24px;
 
+  /* The StatusTag's pill and its dot (1.8.0). Both shipped as `h-[21px]` and
+     `size-[5px]` in core.tsx AND in SKILL.md's status-pill recipe — the one
+     recipe this system publishes for an app that has to build the shape inline,
+     because no component can be passed into every slot. So these were never
+     merely internal literals: the document was instructing every consuming app
+     to hard-code both numbers, which is exactly the route 12.5px took into a
+     consumer's source before --font-size-ribbon-meta existed. --font-size-tag's
+     comment below already says "a 21px pill" in prose, which is the tell — a
+     number a second declaration has to describe in words is a missing token.
+
+     TWO tokens, and neither derived from the other, though it is tempting: the
+     dot is the carrier of the non-colour signal in pill + dot + word, so its
+     size answers "can this be seen on a wall tablet from across the room",
+     while the pill's height answers "does this sit on the row's density grid".
+     Derive one from the other and a density change to the pill silently
+     resizes the accessibility signal inside it.
+
+     The dot is also deliberately NOT --e911-radius-xs, which is the same 5px by
+     coincidence: one is a corner, one is a diameter, and a radius pass would
+     drag the dot with it. Same reasoning as the status hues being separate
+     values from the identically-named edge hues above. */
+  --tag-height: 21px;
+  --tag-dot-size: 5px;
+
   --card-padding: var(--e911-space-4);
   --card-edge-width: 4px;          /* the colored top edge */
   --rail-width: 64px;              /* collapsed: one 44px tap target + gutters */
@@ -463,12 +533,55 @@
   --font-size-h3: 14.5px;
   --font-size-kpi: 25px;           /* display 700, tabular-nums */
   --font-size-mono: 12px;
-  /* Ribbon subtitle, RibbonButton labels, and anything an app puts in the
-     ribbon's actions slot. It exists because those three were three separate
-     `text-[12.5px]` literals — two inside this system and one in the first
-     consuming app, copied out of the component to match it. A size that three
-     files agree on by eye is a token that has not been written down yet. */
-  --font-size-ribbon-meta: 12.5px;
+  /* The system's small text: one step under --font-size-body, and the size that
+     most of a screen which is neither a table nor a heading turns out to be.
+
+     RENAMED FROM --font-size-ribbon-meta IN 1.8.0, because that name was
+     measurably wrong and had been since 1.4.0. It was named after the first
+     three places 12.5px appeared, which happened to be the ribbon's subtitle
+     and its buttons — and a sample of three, all adjacent, is how a size gets a
+     place for a name. Counted properly now:
+
+       · this package paints it at 10 places. TWO are the ribbon (shell.tsx).
+         The other eight are a Toast message, a Dialog description, a DataTable
+         empty state, a Select no-options row, a FormField label, and two
+         Pagination controls.
+       · spec.html paints it at 22 places. FOUR are the ribbon mock. Eighteen
+         are the specification document's own explanatory prose.
+       · the first consuming app writes the raw 12.5px literal 115 times across
+         19 files, and NOT ONE of those 19 files contains a Ribbon. That was
+         verified by grepping those exact 19 files for the element: zero hits.
+
+     So the sweep that was about to replace those 115 literals with a token
+     would have written the word `ribbon` onto 115 table rows, field hints and
+     empty-list lines. A naming bug is cheap while one component uses the token
+     and expensive at 115 call sites, which is where this one was caught.
+
+     The new name is anchored to --font-size-body rather than to a place,
+     because a place is precisely what went wrong. It is NOT `body` at a smaller
+     size in every respect: it keeps the 1.35 leading it has carried in both
+     Tailwind ports since 1.4.0, and it does not take body's -0.004em tracking.
+     Both are preserved exactly, because a rename must not move a pixel.
+
+     Against --font-size-ui-sm (12px), which is half a pixel away and is the
+     only token this one can be confused with: `ui-sm` is text INSIDE a piece of
+     chrome that has its own box — a Chip, a Tooltip, a toast action, a calendar
+     day. `body-sm` is the page's own small text — the paragraph, the field
+     label, the empty row, the subtitle. Whether two sizes half a pixel apart
+     should collapse into one step is the resize 1.7.0 deferred, and it is still
+     deferred; this pass renames and nothing else. */
+  --font-size-body-sm: 12.5px;
+  /* DEPRECATED ALIAS (1.8.0), and load-bearing until it is removed: every
+     existing consumer of the old spelling resolves through this line — this
+     package's own ten call sites, spec.html, and whatever a consuming app has
+     already shipped. A naming bug is not a reason to break somebody's build,
+     and both Tailwind ports keep the old utility for the same reason.
+
+     Removable in 2.0.0, once no source in this repo and no consuming app names
+     it. Grep for the UTILITY spelling as well as this one when checking, since
+     that is where it actually hides — an app never writes the custom property,
+     it writes the class. */
+  --font-size-ribbon-meta: var(--font-size-body-sm);
 
   /* ------------------------------------------------------------------------
      The seven sizes that were text-[Npx] literals inside this package (1.7.0).
@@ -539,6 +652,52 @@
      the one size nothing else may reach for. Scoped by name so that exemption
      cannot spread. */
   --font-size-seal: 9px;
+
+  /* ------------------------------------------------------------------------
+     THE TIER THE SCALE STOPPED SHORT OF (1.8.0): type on a surface nobody
+     walks up to.
+
+     Every size above this comment, --font-size-kpi included, is DESK DENSITY —
+     a number on a card, on a machine at arm's length. A kiosk is not that
+     surface, and the first consuming app proved it by REFUSING the scale
+     rather than bending it: its wall clock is a raw 64px literal and its punch
+     confirmation a raw 28px one, in one file, because 25px on a tablet bolted
+     to a wall is a number an operator crossing the room cannot read. Whoever
+     wrote those two was right about the design and had nowhere to put the
+     sizes. This is the nowhere.
+
+     ONE CONSUMING FILE TODAY, AND THAT IS NOT THE --font-size-h1 MISTAKE.
+     The warning further up this file — "a token with no consumer is how
+     --font-size-h1 ended up describing a size only one page renders" — is about
+     a token that describes a size NOTHING renders, invented ahead of a need.
+     These two describe sizes that already render, in a role the scale genuinely
+     lacks, found by a consumer who had already hit the gap. The test that
+     matters is whether a SECOND surface of the same class reaches for the same
+     names, and the two nearest ones do: a wall board of who is on the floor,
+     and a shift-change display, each want one value large enough to read from
+     the doorway and one line of text beside it. Both are read-only, which is
+     also why there is no third token here for a button label — see below.
+
+     FONT-SIZE ONLY, like the 1.7.0 set, and here the evidence is unusually
+     direct rather than inherited: the two literals being named carry DIFFERENT
+     leading at their only call sites — the clock sets it to 1, the confirmation
+     heading to 1.25. Any single line-height in the token would therefore be
+     silently wrong at one of the two, which is the same argument that keeps
+     letter-spacing off --font-size-micro. Leading stays at the call site.
+
+     `glance` names the reading CONDITION — across a room, without approaching —
+     and deliberately not the mounting or the device, so it stays true for a
+     pedestal kiosk or a ceiling-hung board as well as for the wall tablet these
+     came from. It does NOT mean "a summary at a glance": that is a KpiCard, and
+     --font-size-kpi is its size.
+     ---------------------------------------------------------------------- */
+  /* The one value a distance-read surface exists to show — the kiosk's wall
+     clock. --font-size-kpi is the same job at a desk. */
+  --font-size-glance: 64px;
+  /* The line of text on that surface: read at the same distance, but able to
+     hold a phrase without wrapping on a 1024px tablet. The kiosk's punch
+     confirmation, "Clock-in recorded at 14:32:07", is the shape of it. */
+  --font-size-glance-sm: 28px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -747,6 +906,49 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 5px var(--focus-ring-halo);
   transition-property: none;
+}
+/* THE SAME INDICATOR, DRAWN INWARD, WHERE OUTWARD IS CLIPPED (1.8.0).
+
+   The rule above reaches 7px OUTSIDE the control's border box — 2px of offset,
+   a 2px ring, and a halo to 5px. `DomainCard` is `overflow-hidden`, which it
+   has to be or a flush table's square corners paint over the card's rounded
+   ones. So a control sitting flush against a flush card's inner edge has its
+   entire indicator clipped away on that edge.
+
+   Found by removing the local focus rings in 1.8.0, and worth stating plainly:
+   the sweep did not create this, it REVEALED it. Those local rules drew a
+   `focus:border` INSIDE the control's own box, where nothing can clip it, so
+   for three components the clipping was invisible. Every other focusable in a
+   flush card — including `DataTable`'s scroll region, whose 1.7.0 comment
+   already says it has no ring of its own — had been losing its indicator on
+   that edge since flush cards existed.
+
+   Exposure, measured in the first consuming app: 25 flush cards across 16
+   files, 11 of those files containing focusable controls. Not theoretical.
+
+   The geometry is the SAME indicator reflected, not a second one to learn:
+
+     outward (default)        inward (here)
+     0-2px  halo              0-2px  halo   (inset spread)
+     2-4px  ring              2-4px  ring   (outline-offset: -2px)
+     4-5px  halo              4-5px  halo
+
+   `outline-offset` goes negative and the halo's spread becomes `inset`; the
+   outline still paints over the box-shadow, so the two-tone banding survives
+   and both tones keep the contrast they were measured for. A padded card needs
+   none of this — `p-4` is 16px against a 7px reach — but scoping it to the
+   flush case only would mean a control that MOVES between the two changes its
+   indicator, so it is scoped to the clipping container instead. Everything
+   inside a flush card draws inward, whether or not it happens to sit at the
+   edge, and the indicator is therefore a property of where you are rather than
+   of how close you are.
+
+   `.e911-card-flush` is set by `DomainCard` when `flush` is true. An app that
+   builds its own clipping container owes the same class; there is no way for
+   CSS to detect "my indicator would be clipped". */
+.e911-app .e911-card-flush :focus-visible {
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 5px var(--focus-ring-halo);
 }
 /* The ribbon re-points the ring, it does not opt out of it: on the gradient the
    brand orange is invisible at both ends, and --ribbon-text is the one colour

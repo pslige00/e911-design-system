@@ -549,6 +549,14 @@ const PAIRS = [
   { role: "KPI numeral", where: "KpiCard b", fg: "--text-primary", bg: ["--surface-card"], px: 25, weight: 700 },
   { role: "Input value", where: "FormField / Select / DateField", fg: "--text-primary", bg: ["--surface-card"], px: 13, weight: 400 },
   { role: "Tooltip text", where: "Tooltip", fg: "--text-primary", bg: ["--surface-card"], px: 12, weight: 500 },
+  // The 1.8.0 read-at-distance tier. Both clear the LARGE-text threshold (3:1)
+  // rather than 4.5:1, which is exactly why they are worth listing rather than
+  // assuming: a future lift of --text-primary would otherwise be scored only
+  // against sizes that owe more, and the one surface in this system where a
+  // dispatcher reads from across a room would be the one nothing measured.
+  // The threshold being easier does not make the reading condition easier.
+  { role: "Glance value", where: "kiosk wall clock", fg: "--text-primary", bg: ["--surface-card"], px: 64, weight: 700 },
+  { role: "Glance line", where: "kiosk punch confirmation", fg: "--text-primary", bg: ["--surface-card"], px: 28, weight: 700 },
 
   // ---- secondary --------------------------------------------------------
   { role: "Field label", where: "FormField label", fg: "--text-secondary", bg: ["--surface-card"], px: 12.5, weight: 500 },

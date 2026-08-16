@@ -10,6 +10,17 @@
  * re-themes Tailwind utilities with zero config. Import tokens.css first.
  * See SETUP.md in the repo root for how a separate app repo wires this in.
  */
+/**
+ * 12.5px, declared once so the new name and its deprecated alias cannot drift.
+ *
+ * Spelling the tuple twice would be one edit away from `text-ribbon-meta` and
+ * `text-body-sm` rendering at different sizes — which is a worse bug than the
+ * naming one being fixed, because it would only show up on the screens that
+ * still use the old spelling. See --font-size-body-sm in tokens.css for why the
+ * rename happened and when the alias can go.
+ */
+const bodySm = ["12.5px", { lineHeight: "1.35" }];
+
 export default {
   darkMode: ["selector", '[data-theme="dark"]'],
   theme: {
@@ -109,9 +120,18 @@ export default {
         h3: ["14.5px", { lineHeight: "1.3", letterSpacing: "-0.01em", fontWeight: "700" }],
         kpi: ["25px", { lineHeight: "1.1", letterSpacing: "-0.015em", fontWeight: "700" }],
         mono: ["12px", { lineHeight: "1.4" }],
-        /* Ribbon subtitle, RibbonButton labels, and app content in the ribbon's
-           actions slot. Added in 1.4.0 so app code stops copying the literal. */
-        "ribbon-meta": ["12.5px", { lineHeight: "1.35" }],
+        /* The system's small text — one step under `body`. Added in 1.4.0 as
+           `ribbon-meta` and renamed in 1.8.0: of the 115 places the consuming
+           app writes this size, none is in a file that renders a Ribbon, and
+           inside this package only 2 of 10 uses are. Line-height stays at the
+           1.35 it has carried since 1.4.0, because a rename must not resize
+           anything. See tokens.css. */
+        "body-sm": bodySm,
+        /* DEPRECATED ALIAS (1.8.0). Same tuple by construction, kept live so
+           nothing built against 1.7.0 breaks on a naming fix. Remove in 2.0.0
+           once no app names it — and grep for this utility spelling, not the
+           custom property, because the class is what app code writes. */
+        "ribbon-meta": bodySm,
 
         /* The eight sizes that were text-[Npx] literals inside this package's
            own components until 1.7.0. Values unchanged — this names what ships.
@@ -154,16 +174,41 @@ export default {
            reach for it. No letterSpacing member: declaring one here and not in
            the v4 port made the two ports render the lockup differently. */
         seal: "9px",
+
+        /* Read from across a room, not from a chair (1.8.0). `glance` is the
+           kiosk's wall clock, `glance-sm` the line beside it. Everything above
+           is desk density, `kpi` included, which is why the consuming app
+           refused the scale here and hand-wrote both sizes.
+
+           NO lineHeight MEMBER, and for once the evidence is first-hand rather
+           than inherited from the 1.7.0 argument: the two literals these
+           replace carry different leading at their only call sites — 1 on the
+           clock, 1.25 on the confirmation. A token value would be wrong at one
+           of them. Leading stays at the call site. See tokens.css. */
+        glance: "64px",
+        "glance-sm": "28px",
       },
       borderRadius: {
-        xs: "var(--e911-radius-xs)",     /* 5px  — Checkbox box ONLY; see
-                                            tokens.css for why it is not 8px */
+        xs: "var(--e911-radius-xs)",     /* 5px  — the small-box corner: any
+                                            painted box <= 20px on its short
+                                            side (Checkbox, CertChip, the KPI
+                                            delta pill). Widened from "Checkbox
+                                            box ONLY" in 1.8.0; a chip, an input
+                                            or a card is still a review block.
+                                            See tokens.css for why it is not
+                                            8px, and for the ratio the scope is
+                                            actually made of. */
         sm: "var(--e911-radius-sm)",     /* 8px  — chips, inputs   */
         DEFAULT: "var(--e911-radius-md)",/* 10px — cards           */
         md: "var(--e911-radius-md)",     /* 10px — same, spelled out; without
                                             this key `rounded-md` silently falls
                                             through to Tailwind's own 6px, which
-                                            is not one of the three radii. */
+                                            is not one of the system's radii.
+                                            Worth knowing when someone proposes
+                                            adding one at 6px: that value is not
+                                            a design decision this system could
+                                            defend, it is the framework default
+                                            this key exists to keep out. */
         lg: "var(--e911-radius-lg)",     /* 14px — ribbon, dialogs */
         pill: "var(--e911-radius-pill)",
       },
@@ -179,6 +224,16 @@ export default {
                                                BOX. Its tap target is the label
                                                row, which is min-h-tap. */
         "check-tap": "var(--check-size-tap)",
+        tag: "var(--tag-height)",           /* h-tag — the StatusTag pill */
+        "tag-dot": "var(--tag-dot-size)",   /* size-tag-dot — the dot inside it.
+                                               Both ports must carry these:
+                                               SKILL.md's status-pill recipe
+                                               names them now instead of
+                                               printing 21px and 5px for apps to
+                                               copy, and a recipe that resolves
+                                               in one port and silently drops in
+                                               the other is worse than the
+                                               literal it replaced. */
       },
       zIndex: {
         rail: "var(--layer-rail)",

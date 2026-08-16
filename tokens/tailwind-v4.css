@@ -139,9 +139,24 @@
   --text-mono: var(--font-size-mono);
   --text-mono--line-height: 1.4;
 
-  /* Ribbon subtitle, RibbonButton labels, and whatever an app puts in the
-     ribbon's actions slot beside them. Named so an app stops writing
-     `text-[12.5px]` to line up with a literal inside this package. */
+  /* The system's small text — one step under `body`. Field labels, supporting
+     prose, empty-list rows, a Dialog description, a Toast message, and the
+     ribbon's subtitle too.
+
+     Added in 1.4.0 as `ribbon-meta` and renamed in 1.8.0. The old name came
+     from the first three places 12.5px appeared, which were all ribbon-adjacent
+     by accident of order; what ended it is that the consuming app writes this
+     size 115 times across 19 files and not one of those files renders a Ribbon.
+     Line-height stays at the 1.35 it has carried since 1.4.0, because a rename
+     must not resize anything. See tokens.css. */
+  --text-body-sm: var(--font-size-body-sm);
+  --text-body-sm--line-height: 1.35;
+
+  /* DEPRECATED ALIAS (1.8.0). It resolves through --font-size-ribbon-meta,
+     which tokens.css now points at --font-size-body-sm, so the old utility and
+     the new one cannot drift apart by construction. Kept live because a naming
+     bug is not a reason to break a build that already shipped. Remove in 2.0.0
+     together with the custom property behind it. */
   --text-ribbon-meta: var(--font-size-ribbon-meta);
   --text-ribbon-meta--line-height: 1.35;
 
@@ -188,6 +203,20 @@
      the two ports render the lockup differently. */
   --text-seal: var(--font-size-seal);
 
+  /* Read from across a room rather than from a chair (1.8.0). `glance` is the
+     kiosk's wall clock; `glance-sm` is the line beside it. Everything above is
+     desk density including --text-kpi, which is why the consuming app declined
+     to use kpi for a 64px clock and hand-wrote both sizes instead.
+
+     NO --line-height MEMBERS, and here the reason is first-hand rather than
+     inherited from the 1.7.0 argument above: the two literals these replace
+     carry DIFFERENT leading at their only call sites — 1 on the clock, 1.25 on
+     the confirmation heading — so a token value would be silently wrong at one
+     of them. Same shape as --text-micro and letter-spacing. Both ports must
+     stay identical on this. See tokens.css. */
+  --text-glance: var(--font-size-glance);
+  --text-glance-sm: var(--font-size-glance-sm);
+
   /* radii — three tokens and a pill, nothing else.
 
      `--radius` (no suffix) is Tailwind v4's deprecated-but-still-live key behind
@@ -197,10 +226,13 @@
      no build error. The v3 preset never had this problem because it defined a
      DEFAULT key. Setting it keeps the two ports honest. */
   --radius:      var(--e911-radius-md);
-  /* `rounded-xs` — the Checkbox box, and nothing else. v4 ships an `xs` radius
-     of its own (0.125rem), so leaving this unset would not error, it would
-     silently draw a 2px corner. See tokens.css for why the box does not use
-     `rounded-sm`. */
+  /* `rounded-xs` — the system's small-box corner: the Checkbox box, CertChip,
+     the KpiCard delta pill, and anything else whose short side is 20px or less.
+     Widened from "the Checkbox box only" in 1.8.0; a chip, an input or a card
+     reaching for it is still the review block. v4 ships an `xs` radius of its
+     own (0.125rem), so leaving this unset would not error, it would silently
+     draw a 2px corner. See tokens.css for the ratio the scope is really made
+     of, and for why 8px is wrong at this size in both directions. */
   --radius-xs:   var(--e911-radius-xs);
   --radius-sm:   var(--e911-radius-sm);
   --radius-md:   var(--e911-radius-md);
@@ -218,6 +250,13 @@
      its tap target: that is the label row, which is --spacing-tap tall. */
   --spacing-check:     var(--check-size);
   --spacing-check-tap: var(--check-size-tap);
+  /* h-tag / size-tag-dot — the StatusTag's pill and the dot inside it (1.8.0).
+     Both ports must carry these: SKILL.md's status-pill recipe now names them
+     instead of printing `h-[21px]` and `size-[5px]` for apps to copy, and a
+     recipe that resolves in one port and silently drops in the other is worse
+     than the literal it replaced. */
+  --spacing-tag:     var(--tag-height);
+  --spacing-tag-dot: var(--tag-dot-size);
 
   /* motion. One curve for the whole system. */
   --ease-e911: var(--e911-ease);

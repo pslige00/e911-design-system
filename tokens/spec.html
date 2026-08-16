@@ -39,14 +39,19 @@ h1,h2,h3{margin:0} p{margin:0}
 .ribbon::after{content:""; position:absolute; right:-60px; top:-80px; width:240px; height:240px; border-radius:50%; background:rgba(255,255,255,.10)}
 .ribbon .eyeb{font-size:var(--font-size-micro); font-weight:600; letter-spacing:.1em; text-transform:uppercase}
 .ribbon h1{font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-ribbon-h1); margin-top:4px}
-.ribbon p{font-size:var(--font-size-ribbon-meta); margin-top:3px; opacity:.95}
+.ribbon p{font-size:var(--font-size-body-sm); margin-top:3px; opacity:.95}
 /* The plate is the slot's, not the button's: anything right-aligned here sits
    on the gradient's gold terminus, where --ribbon-text alone is 2.4:1. */
 .ribbon .btns{position:absolute; right:var(--e911-space-4); top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:var(--e911-space-2);
   background:var(--ribbon-actions-scrim); border-radius:var(--e911-radius-sm); padding:4px 6px}
-.ribbon .btns .meta{font-size:var(--font-size-ribbon-meta)}
-.btn-w{height:33px; padding:0 14px; border-radius:9px; border:0; background:var(--ribbon-action-surface); color:var(--ribbon-action-text); font-size:var(--font-size-ribbon-meta); font-weight:700}
-.btn-g{height:33px; padding:0 14px; border-radius:9px; border:1px solid rgba(255,255,255,.5); background:transparent; color:var(--ribbon-text); font-size:var(--font-size-ribbon-meta); font-weight:600}
+.ribbon .btns .meta{font-size:var(--font-size-body-sm)}
+/* --control-height and --e911-radius-sm, matching RibbonButton in shell.tsx.
+   This page showed 33px and 9px until 1.8.0 — the radius was already wrong
+   here when 1.7.0 fixed it in code, which is the drift a spec page exists to
+   prevent and instead demonstrated. Anything that changes RibbonButton changes
+   these two rules in the same commit. */
+.btn-w{height:var(--control-height); padding:0 14px; border-radius:var(--e911-radius-sm); border:0; background:var(--ribbon-action-surface); color:var(--ribbon-action-text); font-size:var(--font-size-body-sm); font-weight:700}
+.btn-g{height:var(--control-height); padding:0 14px; border-radius:var(--e911-radius-sm); border:1px solid rgba(255,255,255,.5); background:transparent; color:var(--ribbon-text); font-size:var(--font-size-body-sm); font-weight:600}
 .btn-g:hover{background:var(--ribbon-ghost-hover)}
 
 .grid{display:grid; gap:var(--e911-space-4)}
@@ -56,7 +61,10 @@ h1,h2,h3{margin:0} p{margin:0}
 .lab{font-size:var(--font-size-label); font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-tertiary)}
 .kpi{font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-kpi); font-variant-numeric:tabular-nums; margin-top:4px}
 .sub{display:flex; gap:6px; align-items:center; font-size:var(--font-size-meta); color:var(--text-secondary); margin-top:4px}
-.mini{font-family:var(--e911-font-mono); font-size:var(--font-size-badge); padding:1px 7px; border-radius:6px; font-weight:500}
+/* The KPI delta pill. --e911-radius-xs since 1.8.0, in step with .cchip below
+   and with both call sites in the package — the two are one badge at one
+   radius, and the whole point of widening `xs` was that they move together. */
+.mini{font-family:var(--e911-font-mono); font-size:var(--font-size-badge); padding:1px 7px; border-radius:var(--e911-radius-xs); font-weight:500}
 .mini.up{background:var(--status-ok-soft); color:var(--status-ok)}
 .mini.dn{background:var(--status-bad-soft); color:var(--status-bad)}
 
@@ -78,8 +86,12 @@ h1,h2,h3{margin:0} p{margin:0}
 .btn-q:hover{background:var(--surface-tint); color:var(--text-primary)}
 .chip{height:var(--control-height-sm); padding:0 12px; border-radius:var(--e911-radius-sm); border:1.5px solid var(--border-default); background:var(--surface-card); color:var(--text-secondary); font-size:var(--font-size-ui-sm); font-weight:500}
 .chip[data-on]{border-color:var(--action-primary); background:var(--surface-brand-soft); color:var(--text-brand); font-weight:600}
-.tag{display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 9px; border-radius:var(--e911-radius-pill); font-size:var(--font-size-label); font-weight:600}
-.tag i{width:5px; height:5px; border-radius:var(--e911-radius-pill); background:currentColor}
+/* --tag-height / --tag-dot-size and --font-size-tag, all three named since
+   1.8.0. The pill was 21px and the dot 5px here and in core.tsx and in
+   SKILL.md's copy-me recipe — three files agreeing by eye, which this system
+   has already written down twice as the definition of a missing token. */
+.tag{display:inline-flex; align-items:center; gap:5px; height:var(--tag-height); padding:0 9px; border-radius:var(--e911-radius-pill); font-size:var(--font-size-tag); font-weight:600}
+.tag i{width:var(--tag-dot-size); height:var(--tag-dot-size); border-radius:var(--e911-radius-pill); background:currentColor}
 .tag.ok{background:var(--status-ok-soft); color:var(--status-ok)}
 .tag.warn{background:var(--status-warn-soft); color:var(--status-warn)}
 .tag.bad{background:var(--status-bad-soft); color:var(--status-bad)}
@@ -89,7 +101,11 @@ h1,h2,h3{margin:0} p{margin:0}
    dichromat. Squint at the row in the Controls card; the words survive it. */
 .tag.info{background:var(--status-info-soft); color:var(--status-info)}
 .tag.neutral{background:var(--status-neutral-soft); color:var(--status-neutral)}
-.cchip{display:inline-flex; align-items:center; height:20px; padding:0 7px; margin-right:4px; border-radius:6px; font-family:var(--e911-font-mono); font-size:var(--font-size-badge); border:1.5px solid var(--border-default); color:var(--text-secondary)}
+/* CertChip. --e911-radius-xs since 1.8.0, and the clearest place on this page
+   to see why: a 1.5px stroke around a 20px box is the Checkbox box two rows
+   down at 18px. Scroll between them — one corner, or two that look like a
+   rendering fault. */
+.cchip{display:inline-flex; align-items:center; height:20px; padding:0 7px; margin-right:4px; border-radius:var(--e911-radius-xs); font-family:var(--e911-font-mono); font-size:var(--font-size-badge); border:1.5px solid var(--border-default); color:var(--text-secondary)}
 .cchip.w{border-color:var(--status-warn); background:var(--status-warn-soft); color:var(--status-warn)}
 .cchip.b{border-color:var(--status-bad); background:var(--status-bad-soft); color:var(--status-bad)}
 
@@ -294,8 +310,10 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <section class="sec">
-    <h2>Type <span>Space Grotesk · Onest · JetBrains Mono · every size is a token (1.7.0)</span></h2>
+    <h2>Type <span>Space Grotesk · Onest · JetBrains Mono · every size is a token (1.7.0) · read-at-distance tier (1.8.0)</span></h2>
     <div class="card">
+      <div class="trow"><span class="lab">glance · 64</span><span style="font-family:var(--e911-font-display); font-weight:700; line-height:1; font-variant-numeric:tabular-nums; font-size:var(--font-size-glance)">14:32:07</span></div>
+      <div class="trow"><span class="lab">glance-sm · 28</span><span style="font-family:var(--e911-font-display); font-weight:700; line-height:1.25; font-variant-numeric:tabular-nums; font-size:var(--font-size-glance-sm)">Clock-in recorded at 14:32:07</span></div>
       <div class="trow"><span class="lab">kpi · 25</span><span class="kpi" style="margin:0">94.6%&nbsp;&nbsp;128&nbsp;&nbsp;97.1%</span></div>
       <div class="trow"><span class="lab">ribbon-h1 · 24</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-ribbon-h1)">Pay Period 14</span></div>
       <div class="trow"><span class="lab">h1 · 20</span><span style="font-family:var(--e911-font-display); font-weight:700; letter-spacing:-.015em; font-size:var(--font-size-h1)">Certification watchlist</span></div>
@@ -304,7 +322,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       <div class="trow"><span class="lab">body · 13.5</span><span style="font-size:var(--font-size-body)">Renewals are due 30 days before a certification lapses. Supervisors get one reminder; after that the record moves to Action needed.</span></div>
       <div class="trow"><span class="lab">control · 13</span><span style="font-size:var(--font-size-control)">The value inside an input, a Select trigger, a Checkbox label — one step down from prose on purpose.</span></div>
       <div class="trow"><span class="lab">table · 12.8</span><span style="font-size:var(--font-size-table)">Whitfield, D. · Shift A · 2026-08-26 · 12 days</span></div>
-      <div class="trow"><span class="lab">ribbon-meta · 12.5</span><span style="font-size:var(--font-size-ribbon-meta)">Ribbon subtitle, RibbonButton labels, anything in the actions slot.</span></div>
+      <div class="trow"><span class="lab">body-sm · 12.5</span><span style="font-size:var(--font-size-body-sm)">Supporting prose, field labels, empty-list rows, a Dialog description — and the ribbon's subtitle. Was <span class="mono">ribbon-meta</span> until 1.8.0; that name is a live alias.</span></div>
       <div class="trow"><span class="lab">ui-sm · 12</span><span style="font-size:var(--font-size-ui-sm)">Chip size="sm" · Tooltip · a toast action · a calendar day</span></div>
       <div class="trow"><span class="lab">meta · 11.5</span><span style="font-size:var(--font-size-meta); color:var(--text-secondary)">KPI sub-line, FormField hint and error</span></div>
       <div class="trow"><span class="lab">label · 11</span><span class="lab" style="color:var(--text-secondary)">Next expiry — Shift B</span></div>
@@ -314,7 +332,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       <div class="trow"><span class="lab">seal · 9</span><span class="seal" style="width:26px; height:26px">911</span></div>
     </div>
     <div class="card" style="margin-top:var(--e911-space-4)">
-      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch">
         Seven of these were <span class="mono">text-[Npx]</span> literals inside this
         package's own components until 1.7.0 — 27 of them, across 8 components, at 9
         sizes that appeared nowhere in <span class="mono">tokens.css</span>. App code has
@@ -324,7 +342,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
         size is a real argument and a visual change; it does not belong in the same pass
         as a rename.
       </p>
-      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch; margin-top:10px">
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch; margin-top:10px">
         <b>Two sizes for one element, on purpose.</b>
         <span class="mono">--font-size-ribbon-h1</span> (24px) is the headline of a
         painted band, sized against the band. <span class="mono">--font-size-h1</span>
@@ -332,6 +350,29 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
         which is exactly where its single consumer lives. Before 1.7.0 the ribbon
         hard-coded 24px, so the system's stated "h1 size" was a size that 95% of its h1s
         did not use.
+      </p>
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch; margin-top:10px">
+        <b>1.8.0 — the tier that stopped short.</b> Everything from
+        <span class="mono">kpi</span> down is desk density: a number on a card, on a
+        machine at arm's length. A kiosk is a different surface, and the first consuming
+        app proved it by <i>refusing</i> the scale rather than bending it — its wall
+        clock and its punch confirmation were both raw literals, because 25px on a tablet
+        bolted to a wall is a number an operator crossing the room cannot read.
+        <span class="mono">glance</span> (64) and <span class="mono">glance-sm</span> (28)
+        are those two sizes, named for the reading condition rather than the device so a
+        wall board or a shift-change display can reach for them too. Neither declares
+        line-height: the two literals carry <i>different</i> leading at their only call
+        sites, so a token value would be wrong at one of them.
+      </p>
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch; margin-top:10px">
+        <b>1.8.0 — <span class="mono">ribbon-meta</span> is now
+        <span class="mono">body-sm</span>.</b> 12.5px was named in 1.4.0 after the first
+        three places it appeared, which were the ribbon's subtitle and its buttons. It is
+        the most-used size in the consuming app — 115 sites across 19 files — and
+        <b>none of those 19 files renders a Ribbon</b>. Inside this package only 2 of 10
+        uses are the ribbon; on this page, only 4 of 22. The old spelling stays live as a
+        deprecated alias in <span class="mono">tokens.css</span> and both Tailwind ports,
+        removable in 2.0.0. Same 12.5px, same 1.35 leading: a rename must not resize.
       </p>
     </div>
   </section>
@@ -486,7 +527,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           <span class="tag info"><i></i>Live estimate</span>
           <span class="tag neutral"><i></i>Voluntary</span>
         </div>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:14px; max-width:52ch">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); margin-top:14px; max-width:52ch">
           Squint at that column, or step back from the screen. Relative luminance of the
           five light-mode fills: info <span class="mono">0.1104</span> · bad
           <span class="mono">0.1125</span> · ok <span class="mono">0.1132</span> ·
@@ -500,7 +541,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       </div>
       <div class="card">
         <span class="lab" style="display:block; margin-bottom:10px">Why the system stopped at three, and why it stopped stopping</span>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:56ch">
           The three-tone rule had a good argument behind it — <i>a status with no tone is
           a status the reader has to interpret</i> — and it was refused several times
           before this. The census that overturned it, from the first consuming app:
@@ -511,7 +552,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           <i>pay is not in question</i> on the same screen. The two new tones give the
           amber back its meaning; they do not let a status avoid having one.
         </p>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:56ch; margin-top:12px">
           <b>When neutral is legitimate.</b> A state that is real, known, and carries no
           judgement — a classification the operator should read but need not act on. It
           is not the tone for "I could not decide". The test:
@@ -546,7 +587,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           <label for="dz">Locked pay period</label>
           <input class="input" id="dz" value="2026-08-01 — 2026-08-14" disabled>
         </div>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:12px; max-width:56ch">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); margin-top:12px; max-width:56ch">
           Before 1.7.0 there was no token, so <span class="mono">Button</span>,
           <span class="mono">Select</span> and <span class="mono">DateField</span> each
           chose their own opacity or their own grey and nothing compared them — the same
@@ -574,7 +615,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           <div class="opt" role="option" aria-selected="false"><span style="width:14px"></span>Shift extension</div>
           <div class="opt" role="option" aria-selected="false" aria-disabled="true"><span style="width:14px"></span>Callback — unavailable</div>
         </div>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:12px; max-width:56ch">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); margin-top:12px; max-width:56ch">
           Three states that look adjacent and are not.
           <span class="mono">--surface-tint</span> is a POINTER resting somewhere;
           <span class="mono">--surface-brand-soft</span> is the active nav DESTINATION, a
@@ -585,7 +626,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           than tint in light and one step lighter in dark — a choice outranks a pointer,
           so it has to survive being hovered. Flip the theme and hover both.
         </p>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); margin-top:12px; max-width:56ch">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); margin-top:12px; max-width:56ch">
           <b>The fill is not the identifier, and must not become one.</b>
           <span class="mono">--surface-selected</span> is 1.31:1 on card in light and
           1.17:1 in dark — nowhere near the 3:1 that 1.4.11 asks of a boundary
@@ -626,7 +667,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
             <a href="./tokens.css">not cutting its descenders</a></li>
         </ul>
         <div class="scrollbox" style="margin-top:12px">
-          <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary)">
+          <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary)">
             Scroll me. <span class="mono">scrollbar-color</span> tints the thumb with
             <span class="mono">--border-strong</span> and leaves the track transparent.
             It is the STANDARD two-value property on purpose: the
@@ -640,7 +681,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       </div>
       <div class="card">
         <span class="lab" style="display:block; margin-bottom:10px">Why this is not a cosmetic pass</span>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:56ch">
           A dispatcher selecting a badge number to paste into the CAD got a cobalt band
           across a warm-neutral table — the one moment in the app that looked like an
           unstyled form. And <span class="mono">--border-control</span> was raised to 3:1
@@ -648,14 +689,14 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           invisible"; a placeholder left at the browser's
           <span class="mono">#9AA0A6</span> undoes half of that on the same field.
         </p>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:56ch; margin-top:12px">
           The base block also sets <span class="mono">::placeholder { opacity: 1 }</span>,
           and that line is load-bearing rather than tidy: Firefox ships the pseudo-element
           at 0.54, which would take <span class="mono">--text-tertiary</span> from its
           audited 4.98:1 to roughly 2.6:1 — a tier raised in 1.2.0 specifically to clear
           4.5:1, silently undone by a UA default in one browser.
         </p>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:56ch; margin-top:12px">
           Every value in the block is a token that already existed. It spends no new
           colour — it stops shipping the browser's opinion of six surfaces the system had
           otherwise decided everything about.
@@ -693,7 +734,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       </div>
     </div>
     <div class="card" style="margin-top:var(--e911-space-4)">
-      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch">
         These are two states, not one. Until 1.7.0 a table still fetching and a table with
         nothing in it were the <b>same rendering</b>, so an operator on a slow link read
         "No exceptions" off a queue that had forty — which is why
@@ -730,7 +771,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       </div>
     </div>
     <div class="card" style="margin-top:var(--e911-space-4)">
-      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch">
         <span class="mono">DataTable</span> owns that scroller itself, and it is
         <b>focusable and named</b>. A container that scrolls only by drag is a 2.1.1
         failure: there is no keyboard gesture for "scroll the thing under the pointer"
@@ -758,7 +799,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
         </div>
       </div>
       <div class="card">
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:56ch">
           Until 1.7.0 the system had two durations, and the larger of them was carrying
           both a chip's colour change and the rail's 64px → 224px width animation. Those
           are not the same movement: <b>a colour swap reads as instant at 170ms, a 160px
@@ -766,7 +807,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
           product UI can spend before an operator mid-task starts waiting for the
           interface.
         </p>
-        <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:56ch; margin-top:12px">
+        <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:56ch; margin-top:12px">
           Reach for it when something changes <b>size or position</b> — the rail opening,
           a Dialog entering, a Select list unrolling. Everything else stays on
           <span class="mono">--e911-dur</span>, and a press or a hover stays on
@@ -863,7 +904,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
       <div class="btns"><span class="meta">Synced 12s ago</span><button class="btn-g">Export</button><button class="btn-w">Approve all</button></div>
     </div>
     <div class="card" style="margin-top:var(--e911-space-4)">
-      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch">
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch">
         <b>The eyebrow is a deliberate exception, and this is the record of it.</b> An
         external design review flagged it in 1.7.0 against a general rule that is usually
         right — <i>a kicker above a heading is decoration, and a heading that needs one is
@@ -874,7 +915,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
         heading says "Pay Period 14"; the eyebrow says "Approvals". That is wayfinding,
         and it is the wayfinding the general rule assumes a breadcrumb already provides.
       </p>
-      <p style="font-size:var(--font-size-ribbon-meta); color:var(--text-secondary); max-width:80ch; margin-top:12px">
+      <p style="font-size:var(--font-size-body-sm); color:var(--text-secondary); max-width:80ch; margin-top:12px">
         It is kept <b>on a condition</b>, which is what makes it an exception rather than
         an opinion: the eyebrow must carry what the collapsed rail cannot. An eyebrow
         reading "APPROVALS" over a heading reading "Approvals" is the decoration the

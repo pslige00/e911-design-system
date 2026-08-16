@@ -372,6 +372,19 @@ export function AppShell({
               // line-height of 1 is invisible here — `place-items-center` centres
               // the line box and half-leading is symmetric, so the glyphs sit
               // exactly where they did under the inherited 1.5.
+              //
+              // THE 30px DISC STAYS AN ARBITRARY UTILITY, reviewed in 1.8.0 and kept
+              // deliberately. This disc is the logotype's own geometry, not a
+              // system metric: it is not a control, nothing aligns to it, and it
+              // is centred inside a `size-tap` RailIcon that owns every
+              // alignment the rail actually has. --font-size-seal is a token for
+              // the opposite reason — it exists to CONTAIN the 1.4.3 logotype
+              // exemption, which is a job beyond naming a number. A
+              // `--seal-size` would have exactly one consumer forever and would
+              // make 30px reachable by things that are not the seal, which is
+              // how --font-size-h1 became the system's "h1 size" that 95% of its
+              // h1s do not use. Redrawing the lockup is a brand change, and a
+              // brand change should have to edit the lockup.
               className="grid size-[30px] place-items-center rounded-pill bg-brand text-seal font-extrabold text-white"
             >
               911
@@ -475,6 +488,17 @@ export function Ribbon({ eyebrow, title, subtitle, actions, className }: RibbonP
         className
       )}
     >
+      {/* The Solstice glow disc. All three literals STAY, reviewed in 1.8.0 and
+          kept deliberately: -60px, -80px and 240px are not three metrics, they
+          are one piece of art. The disc is sized so that offsetting it by those
+          two amounts leaves an arc bleeding off the top-right corner of the
+          band, and the value of any one of them is meaningless without the
+          other two. Naming them separately is what would let them drift —
+          reposition it without resizing it and the whole circle lands inside
+          the ribbon, which reads as a stray bubble rather than as light.
+          aria-hidden, purely decorative, and nothing in the system aligns to
+          it. If the band's proportions ever change, redraw all three together
+          against spec.html. */}
       <div
         aria-hidden
         className="absolute -right-[60px] -top-[80px] size-[240px] rounded-pill bg-white/10"
@@ -555,7 +579,18 @@ export function RibbonButton({
         // --e911-radius-md is "cards". This is a button, and every other button
         // in the system — Button in core.tsx included, at 1px shorter — is
         // already rounded-sm.
-        "h-[33px] rounded-sm px-3.5 text-ribbon-meta transition duration-fast ease-e911",
+        //
+        // `h-ctl` (1.8.0) closes the second half of that sentence. This drew
+        // 33px — one pixel taller than --control-height, which every other
+        // control in the system takes, and one pixel off the 4px grid the rest
+        // of the metrics sit on. Nothing depended on the extra pixel: the
+        // ribbon's height comes from its eyebrow, h1 and subtitle, and this
+        // button is absolutely positioned and centred inside the actions plate,
+        // so 33 and 32 place it identically. It was the same hand as the 9px —
+        // a control drawn by eye beside a system that had already named the
+        // number — and 1.7.0 corrected the radius while leaving the height,
+        // because a rename commit could not absorb a resize.
+        "h-ctl rounded-sm px-3.5 text-ribbon-meta transition duration-fast ease-e911",
         variant === "primary"
           ? // The pill and its label are ONE token pair. This read `bg-white
             // text-brand-text`, and --text-brand flips to a light orange in dark

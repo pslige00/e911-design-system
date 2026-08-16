@@ -451,8 +451,20 @@ export function DateField({
           // Dates are mono + tabular everywhere in this system, including while
           // they're being typed — the columns have to stay put.
           "font-mono tabular-nums",
-          "focus:border-[var(--focus-ring)] focus:outline-none",
-          "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
+          // NO FOCUS TREATMENT HERE — see the same removal in select.tsx. The
+          // input carried spec.html's `.input:focus` recipe: an outline-
+          // suppressing utility plus a border and shadow re-drawn in
+          // --focus-ring, over the top of the one two-tone indicator
+          // `.e911-app :focus-visible` already draws. The suppression was inert
+          // only by cascade luck — that rule is UNLAYERED, so it beat this
+          // utility. Layer it, or let a consuming app order @layer differently,
+          // and a keyboard operator gets no focus indicator on a date field at
+          // all (WCAG 2.4.7), silently.
+          //
+          // Nothing else went with it: this input has no open state of its own
+          // (the calendar button below owns `aria-expanded`), and the field's
+          // resting stroke is still `border-line-control` / `border-bad` below.
+          //
           // The system's disabled tokens (1.7.0), replacing this file's own
           // `opacity-45`. On a MONO field the old treatment was the worst of the
           // three: a faded YYYY-MM-DD is exactly the string an operator has to

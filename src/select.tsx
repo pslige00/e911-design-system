@@ -374,8 +374,47 @@ export function Select<T extends string = string>({
           "text-left text-control transition duration-fast ease-e911",
           CONTROL_HEIGHT[size],
           size === "tap" ? "px-3" : "px-2.5",
-          "focus:border-[var(--focus-ring)] focus:outline-none",
-          "focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--focus-ring)_20%,transparent)]",
+          // NO FOCUS TREATMENT HERE. tokens.css draws ONE two-tone indicator for
+          // every focusable thing in the system (`.e911-app :focus-visible`);
+          // this trigger carried spec.html's `.input:focus` recipe instead — an
+          // outline-suppressing utility plus a border and a 3px shadow re-drawn
+          // in --focus-ring. The suppressed outline was the dangerous half: it
+          // never actually erased the system indicator, but only because that
+          // rule is UNLAYERED and so outranks any utility. Put it in a layer,
+          // or let a consuming app declare @layer order differently, and this control
+          // loses its keyboard focus ring entirely — no error, no warning, a
+          // WCAG 2.4.7 failure whose trigger lives outside this repo.
+          //
+          // `focus:`, not `focus-visible:`, was the visible half: it matched
+          // POINTER focus, so a mouse-clicked trigger painted an indicator the
+          // system deliberately withholds. Because focus STAYS on the trigger
+          // while the list is open (aria-activedescendant — see the component
+          // note), that border was also the only thing marking "open" on the
+          // pointer path. That was a side effect, not a designed state: the same
+          // two lines were copy-pasted onto DateField's input and FormField's
+          // className, neither of which opens anything. An open trigger that
+          // should read differently needs its OWN token — --focus-ring on a
+          // non-focus state is the confusion SKILL.md rule 7 exists to stop.
+          //
+          // The removed utility is DESCRIBED here and not quoted verbatim, in
+          // all three files. Tailwind v4 scans source as raw text and has no
+          // idea what a comment is, so spelling the class name out in prose
+          // re-emitted a live `:focus { outline-style: none }` rule into every
+          // consuming app's stylesheet from these comments alone — dead, since
+          // nothing carries the class, but it is the exact string an audit of
+          // the compiled CSS greps for and would then find no source for.
+          //
+          // KNOWN AND NOT FIXED HERE: the system indicator draws OUTSIDE the
+          // border box (outline-offset 2px + a 5px halo, ~7px of reach), and
+          // DomainCard sets overflow-hidden. A control sitting flush against a
+          // `flush` card's inner edge therefore has its indicator clipped away
+          // on that edge — measured on painted pixels, the left edge goes from
+          // the old orange border to --border-control with nothing outside it.
+          // The removed border-colour half was inside the box and so survived
+          // the clip; it was covering for that. An ordinary padded card is fine
+          // (p-4 is 16px, more than the 7px reach). The fix belongs in
+          // tokens.css (a scoped inset offset) or in DomainCard, not here.
+          //
           // Disabled comes from the system now (1.7.0), not from this file.
           // `opacity-45` was one of three treatments three components each
           // invented separately, and it dims the label THROUGH the card, so a

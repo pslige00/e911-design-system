@@ -34,6 +34,16 @@ export type {
 // at the top of that file.
 export { EmptyState, Skeleton } from "./feedback";
 export type { EmptyStateProps, SkeletonProps } from "./feedback";
+// The inline message a screen attaches to a region of itself. The first
+// consuming app hand-rolled 22 of them across seven files — six sharing one
+// class string, three carrying a live region — which is why a dispatcher on a
+// screen reader was told nothing when a warning appeared. `kind` is the prop to
+// read first: it says whether the message is standing or news, which is the one
+// thing neither the component nor the tone can work out. Like feedback.tsx,
+// callout.tsx carries no "use client", so a server page can render a standing
+// notice directly.
+export { Callout } from "./callout";
+export type { CalloutProps } from "./callout";
 // The boolean controls. Self-labelling — the label is a CHILD and part of the
 // hit area, which is why they are not FormField children. See SKILL.md.
 export { Checkbox, Radio } from "./choice";

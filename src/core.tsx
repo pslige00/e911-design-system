@@ -185,14 +185,21 @@ export function StatusTag({ tone, children, className, ...rest }: StatusTagProps
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 h-[21px] px-2 rounded-pill",
+        // `h-tag` and `size-tag-dot` (1.8.0), which were a 21px height and a
+        // 5px dot written as arbitrary utilities. Not a tidy-up: SKILL.md publishes this exact shape as a
+        // recipe for apps that cannot pass a component into a slot, so both
+        // numbers were being copied into app source — the same path 12.5px took
+        // before --font-size-ribbon-meta existed. The dot in particular is the
+        // non-colour half of pill + dot + word, and a signal an app can only
+        // reproduce by transcribing a literal is a signal that will drift.
+        "inline-flex items-center gap-1.5 h-tag px-2 rounded-pill",
         "text-tag font-semibold",
         tagTone[tone],
         className
       )}
       {...rest}
     >
-      <i aria-hidden className="size-[5px] rounded-pill bg-current" />
+      <i aria-hidden className="size-tag-dot rounded-pill bg-current" />
       {children}
     </span>
   );
@@ -229,7 +236,22 @@ export function CertChip({ tone = "neutral", children, className, ...rest }: Cer
   return (
     <span
       className={cn(
-        "inline-flex items-center h-5 px-1.5 rounded-[6px] border-chip",
+        // `rounded-xs` (1.8.0), not the 6px this drew before it — the last
+        // undeclared radius in the package, after 1.7.0 took RibbonButton's 9px.
+        // tokens.css widened `xs` from "the Checkbox box" to any painted box
+        // 20px or under to make room for it, because the scope was always a
+        // stand-in for SMALL and this is the smallest thing here after the box.
+        //
+        // The two are nearly the same drawing: a 1.5px `border-chip` stroke
+        // around a 20px box here, around an 18px box there. Six and five in one
+        // form is the squircle-beside-a-circle problem `xs` was minted to end.
+        // `sm` was never available — 8px on this height clamps to a stadium,
+        // which is StatusTag's shape, and a cert code is not a status.
+        //
+        // MUST stay in step with the KpiCard delta pill in data.tsx, which is
+        // the same badge at the same radius. If one moves and the other does
+        // not, two identical pills sit in one card at different corners.
+        "inline-flex items-center h-5 px-1.5 rounded-xs border-chip",
         "font-mono text-badge tabular-nums",
         certTone[tone],
         className
