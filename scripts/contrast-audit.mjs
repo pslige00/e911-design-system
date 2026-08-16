@@ -175,13 +175,21 @@ function gradientAt(stops, t) {
   return parseColor(stops[stops.length - 1].color);
 }
 
-/** Worst contrast anywhere in [from, to] of the gradient line. */
-function worstOverZone(stops, fgRaw, scrim, from, to) {
+/** The painted ground at t: the gradient, then every scrim over it in order. */
+function groundAt(stops, scrims, t) {
+  let bg = gradientAt(stops, t);
+  for (const s of scrims) bg = over(parseColor(s), bg);
+  return bg;
+}
+
+/** Worst contrast anywhere in [from, to] of the gradient line. `scrims` is a
+    LIST because the ribbon stacks them: the actions slot's plate, and then a
+    ghost button's hover fill on top of it. */
+function worstOverZone(stops, fgRaw, scrims, from, to) {
   let worst = Infinity;
   let at = from;
   for (let t = from; t <= to + 1e-9; t += 0.01) {
-    let bg = gradientAt(stops, t);
-    if (scrim) bg = over(parseColor(scrim), bg);
+    const bg = groundAt(stops, scrims, t);
     const fg = over(parseColor(fgRaw), bg);
     const r = contrast(fg, bg);
     if (r < worst) {
@@ -189,10 +197,22 @@ function worstOverZone(stops, fgRaw, scrim, from, to) {
       at = t;
     }
   }
-  return { ratio: worst, at, bg: (() => {
-    let b = gradientAt(stops, at);
-    return scrim ? over(parseColor(scrim), b) : b;
-  })() };
+  return { ratio: worst, at, bg: groundAt(stops, scrims, at) };
+}
+
+/**
+ * A TWO-TONE indicator is scored differently from a single colour: the question
+ * is whether the operator can see it, so the better of its two bands against
+ * the surface is what counts. Scoring the halo alone would report a failure on
+ * every dark surface, where it is invisible by design and the bright ring is
+ * doing the work — and "add a waiver" would be the wrong answer to that.
+ * The two tones must also be legible against EACH OTHER, or the pair collapses
+ * into one band on a surface that swallows either.
+ */
+function bestOfPair(aRaw, bRaw, bg) {
+  const a = over(parseColor(aRaw), bg);
+  const b = over(parseColor(bRaw), bg);
+  return Math.max(contrast(a, bg), contrast(b, bg));
 }
 
 /* -------------------------------------------------------------- threshold */
@@ -222,10 +242,18 @@ function thresholdFor({ px, weight, kind }) {
  */
 const WAIVED = {
   // Cards and row rules are separation, not identification: a DomainCard is
-  // identified by its 4px domain edge (>=3:1 in both themes) and its surface
-  // change against the canvas, and a table row by its content and its hover.
-  "Card border": "decorative separation; card identified by domain edge + surface",
-  "Row rule": "decorative separation; rows identified by content and hover state",
+  // identified by its 4px domain edge (>=3:1 in both themes), and a table row by
+  // its content and its hover.
+  //
+  // 1.4.0 lifted the DARK values (row 1.13 -> 1.46, card 1.32 -> 1.86 on card)
+  // after measuring them on painted pixels, and the reason is worth keeping:
+  // the old waiver said cards are identified by "domain edge + surface", but in
+  // dark --surface-card is 1.09:1 against --surface-canvas, so the surface half
+  // of that sentence is false and the border was carrying it. They stay waived
+  // because 3:1 here means a ~#6E6055 rule on #1E1814, which turns a 350-row
+  // table into a spreadsheet grid — a different design, not a fixed one.
+  "Card border": "separation, not identification; lifted in 1.4.0, 3:1 would be a grid",
+  "Row rule": "separation, not identification; lifted in 1.4.0, 3:1 would be a grid",
   // The secondary button has a visible label and a 3:1 hover/focus state, so
   // its resting stroke is not the sole identifier.
   "Secondary button border": "labelled control; focus ring and hover carry the state",
@@ -297,7 +325,10 @@ const PAIRS = [
   // measures what ships — the pill was `bg-white` with a themed label.
   { role: "Ribbon primary action", where: "RibbonButton variant=primary", fg: "--ribbon-action-text", bg: ["--ribbon-action-surface"], px: 12.5, weight: 700 },
   { role: "Rail seal", where: "AppShell 911 badge", fg: "#FFFFFF", bg: ["--e911-brand"], kind: "logotype" },
-  { role: "Active tab underline", where: "Tabs", fg: "--action-primary", bg: ["--surface-canvas", "--surface-card"], kind: "ui" },
+  { role: "Active tab underline", where: "Tabs", fg: "--action-primary", bg: ["--surface-canvas", "--surface-card", "--surface-tint"], kind: "ui" },
+  // The ring's own band, on the flat surfaces. The pair check below is the one
+  // that covers the gradient; this row keeps the brand tone honest on its own
+  // where it is the band doing the work.
   { role: "Focus ring", where: ":focus-visible", fg: "--focus-ring", bg: ["--surface-canvas", "--surface-card", "--surface-sunken", "--surface-tint"], kind: "ui" },
 
   // ---- status -----------------------------------------------------------
@@ -332,10 +363,30 @@ const RIBBON = [
   { role: "Ribbon eyebrow", px: 10.5, weight: 600, zone: [0, 0.55] },
   { role: "Ribbon h1", px: 24, weight: 700, zone: [0, 0.55] },
   { role: "Ribbon subtitle", px: 12.5, weight: 400, zone: [0, 0.55] },
-  // Right-aligned, hence the scrim: this is the one role that lands in the
-  // gold terminus, and without --ribbon-ghost-scrim it measures 2.62:1.
-  { role: "Ribbon ghost button", px: 12.5, weight: 600, zone: [0.7, 1], scrim: "--ribbon-ghost-scrim" },
-  { role: "Ribbon ghost button (hover)", px: 12.5, weight: 600, zone: [0.7, 1], scrim: "--ribbon-ghost-scrim-hover" },
+  // Everything right-aligned sits on the actions slot's plate. The zone runs to
+  // the very end of the gradient because the slot's x depends on the page's own
+  // content length and the browser window — measured across 1024/1440/1920, the
+  // cluster lands anywhere from 60% to the right edge.
+  { role: "Ribbon actions text", px: 12.5, weight: 400, zone: [0.55, 1], scrims: ["--ribbon-actions-scrim"] },
+  { role: "Ribbon ghost button", px: 12.5, weight: 600, zone: [0.55, 1], scrims: ["--ribbon-actions-scrim"] },
+  // Hover DEEPENS the plate rather than lightening it; both scrims composite.
+  { role: "Ribbon ghost button (hover)", px: 12.5, weight: 600, zone: [0.55, 1], scrims: ["--ribbon-actions-scrim", "--ribbon-ghost-hover"] },
+];
+
+/**
+ * The focus indicator, scored as the two-tone thing it is. Both tones are
+ * measured against every surface a focused control can sit on, and the row
+ * passes on the better of the two — see bestOfPair. The ribbon is included as a
+ * SWEEP rather than a colour, because it is one element that runs from a deep
+ * rust to a light gold and the indicator has to survive all of it; that sweep is
+ * exactly where a single-colour ring measured 1.25:1 before 1.4.0.
+ */
+const FOCUS = [
+  { role: "Focus indicator (pair)", ring: "--focus-ring", halo: "--focus-ring-halo",
+    surfaces: ["--surface-canvas", "--surface-card", "--surface-sunken", "--surface-tint",
+               "--action-primary", "--status-bad", "--surface-brand-soft"] },
+  // Inside the ribbon, `.e911-ribbon` re-points --focus-ring at --ribbon-text.
+  { role: "Focus indicator (ribbon)", ring: "--ribbon-text", halo: "--focus-ring-halo", ribbon: true },
 ];
 
 /* ------------------------------------------------------------------- run */
@@ -403,8 +454,8 @@ for (const theme of ["light", "dark"]) {
   const fgRaw = resolveToken("--ribbon-text", theme);
   for (const item of RIBBON) {
     const need = thresholdFor(item);
-    const scrim = item.scrim ? resolveToken(item.scrim, theme) : null;
-    const { ratio, at, bg } = worstOverZone(stops, fgRaw, scrim, item.zone[0], item.zone[1]);
+    const scrims = (item.scrims ?? []).map((s) => resolveToken(s, theme));
+    const { ratio, at, bg } = worstOverZone(stops, fgRaw, scrims, item.zone[0], item.zone[1]);
     record({
       theme,
       role: item.role,
@@ -417,6 +468,72 @@ for (const theme of ["light", "dark"]) {
       ratio,
       pass: ratio + 1e-9 >= need,
     });
+  }
+
+  for (const item of FOCUS) {
+    const ringRaw = resolveToken(item.ring, theme);
+    const haloRaw = resolveToken(item.halo, theme);
+
+    // The two tones must be legible against each other, whatever they land on.
+    const pairRatio = contrast(parseColor(ringRaw), parseColor(haloRaw));
+    record({
+      theme,
+      role: `${item.role} · ring vs halo`,
+      fgName: item.ring,
+      bgName: item.halo,
+      fg: hex(parseColor(ringRaw)),
+      bg: hex(parseColor(haloRaw)),
+      size: "UI element",
+      need: 3,
+      ratio: pairRatio,
+      pass: pairRatio + 1e-9 >= 3,
+    });
+
+    if (item.ribbon) {
+      // Worst point anywhere on the run, judged on the better tone there.
+      let worst = Infinity;
+      let at = 0;
+      for (let t = 0; t <= 1 + 1e-9; t += 0.01) {
+        const bg = groundAt(stops, [], t);
+        const best = bestOfPair(ringRaw, haloRaw, bg);
+        if (best < worst) {
+          worst = best;
+          at = t;
+        }
+      }
+      const bg = groundAt(stops, [], at);
+      record({
+        theme,
+        role: item.role,
+        fgName: `${item.ring} + halo`,
+        bgName: `gradient @ ${(at * 100).toFixed(0)}% of run`,
+        fg: hex(parseColor(ringRaw)),
+        bg: hex(bg),
+        size: "UI element",
+        need: 3,
+        ratio: worst,
+        pass: worst + 1e-9 >= 3,
+      });
+      continue;
+    }
+
+    for (const surfName of item.surfaces) {
+      const canvas = parseColor(resolveToken("--surface-card", theme));
+      const bg = over(parseColor(resolveToken(surfName, theme)), canvas);
+      const best = bestOfPair(ringRaw, haloRaw, bg);
+      record({
+        theme,
+        role: item.role,
+        fgName: `${item.ring} + halo`,
+        bgName: surfName,
+        fg: hex(parseColor(ringRaw)),
+        bg: hex(bg),
+        size: "UI element",
+        need: 3,
+        ratio: best,
+        pass: best + 1e-9 >= 3,
+      });
+    }
   }
 }
 

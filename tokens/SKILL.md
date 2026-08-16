@@ -35,12 +35,24 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
    rule used to read "anything smaller than 12px must be ≥ semibold and
    uppercase-label styled", which is what let `--text-tertiary` ship at 3.21:1
    under every table header in TimeSweep until 1.2.0. Non-text UI that conveys
-   state (focus ring, active underline, domain edge) needs 3:1. Focus states use
-   `--focus-ring`, 2px, offset 2. `npm run audit:contrast` checks every pair in
-   both themes; run it after touching a colour.
-7. **Dark mode is free — keep it free.** Never branch on theme in app code;
+   state (active underline, domain edge) needs 3:1. `npm run audit:contrast`
+   checks every pair in both themes; run it after touching a colour.
+7. **Never draw your own focus ring.** One rule in `tokens.css` gives every
+   focusable thing in every app a TWO-TONE indicator — `--focus-ring` with
+   `--focus-ring-halo` either side of it — because no single colour clears 3:1
+   on every surface the system paints: a single-colour ring measured 1.25:1 on
+   the ribbon gradient in both themes. Two consequences for app code:
+   - a local `focus:ring-*`, `focus:outline-*` or `focus-visible:` colour is a
+     review block. If a control needs a different ring, re-point `--focus-ring`
+     on the SURFACE (what `.e911-ribbon` does), never on the control.
+   - do not add `outline-color` or `box-shadow` to a transition. Tailwind's
+     `transition` utility already lists both, and the system's focus rule sets
+     `transition-property: none` for exactly that reason: an indicator that
+     animates in spends its first frame at `currentColor`, which on a primary
+     button is the label colour on the button's own surface — white on white.
+8. **Dark mode is free — keep it free.** Never branch on theme in app code;
    `[data-theme="dark"]` swaps the same semantic names.
-8. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component
+9. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component
    module.** Every component is `"use client"`; a value re-exported through a
    client module reaches a React Server Component as a client-reference proxy,
    so `DOMAIN_EDGE.operations` is not `"orange"`. `DomainCard` then matches no
@@ -78,6 +90,13 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   during render is a hydration mismatch. With no wiring at all it works
   uncontrolled and starts unpinned.
 
+  `AppShell` also renders the **skip link** (WCAG 2.4.1) as the first thing in
+  the DOM, pointing at the `<main>` it owns — `mainId` names the target,
+  `skipLink={false}` opts out for an app that renders its own before the shell.
+  Do not hand-build one: the rail's pin is deliberately the first control INSIDE
+  the rail, so only the shell can put a bypass ahead of it. `<SkipLink>` is
+  exported for pages with no shell at all (sign-in, kiosk).
+
   Extra destinations go in `footerItems`; non-destination controls (theme,
   avatar) go in `railFooter` as `<RailAction>`. Copying the rail item's class
   string into the footer by hand is how the footer ends up a version behind the
@@ -100,15 +119,38 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   radius `--e911-radius-lg`, eyebrow (11px caps) + display headline + one-line
   sub. Primary page actions live inside the ribbon, right-aligned
   (white button = primary, ghost = secondary).
+
+  **Everything right-aligned goes in `actions`, including plain text.** That
+  slot carries `--ribbon-actions-scrim`, and it exists because the gradient's
+  gold end is 2.4:1 against `--ribbon-text`: measured across 1024/1440/1920px,
+  ribbon text holds 4.5:1 only to about 55% of the width. A freshness stamp or a
+  record count dropped anywhere else on the ribbon fails AA at most window
+  sizes. Size it with `text-ribbon-meta` — the same step `RibbonButton` uses, so
+  app code never writes `text-[12.5px]` to line up with it.
 - **Cards:** `--surface-card`, border `--border-default`, radius
   `--e911-radius-md`, shadow `--shadow-card`, and a **4px colored top edge**
   keyed to domain: orange=operations, teal=roster/people, gold=certifications,
   green=QA, plum=training, blue=facilities/IT. One domain, one hue, everywhere.
+
+  `DomainCard` names its own `<section>` from its title, so every titled card is
+  a landmark — and takes `titleLevel` (default 3) so the page's heading outline
+  is the app's decision, not the component's. The ribbon renders the `h1`, so a
+  card directly under it is usually `titleLevel={2}`. Do NOT bridge the gap with
+  an `sr-only` heading of your own; that was the workaround this prop replaced.
+  A `KpiCard` is deliberately unnamed — six landmarks called "Coverage" between
+  the header and the first table is rotor noise, not navigation.
 - **Filters:** chip row — 28px, 1.5px border, radius `--e911-radius-sm`;
   active chip = brand-soft fill + `--text-brand`.
 - **Tables:** 40px rows, `--surface-sunken` header with 11px caps labels,
   row borders `--border-row`, mono for dates/IDs, cert codes as bordered
   mono chips.
+
+  **A row that navigates uses `rowHref` + `renderLink`, never `onRowClick`
+  alone.** `onRowClick` is a `<tr onClick>` — mouse-only, no tab stop, nothing
+  in the a11y tree, and a 2.1.1 failure. `rowHref` puts one real link in the
+  first cell (named after the row's subject) and keeps the whole row clickable
+  for a pointer. Rows that go nowhere — totals, subheads — opt out with
+  `rowClickable`, so a summary row stops claiming a cursor it cannot honour.
 - **KPI cards:** label (11px caps, `--text-tertiary`) → display numeral
   (`--font-size-kpi`, tabular) → sub-line with mono delta pill.
 
@@ -144,6 +186,9 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 - Status conveyed by color only; non-tabular digits in any numeric column
 - `title="…"` used as a tooltip (rule 5), or an interactive target under
   `--tap-target` anywhere a finger can reach it
+- A local focus ring of any kind (rule 7), or `outline-color` in a transition
+- A clickable table row with no `rowHref`, or a card whose heading level was
+  chosen by the component rather than by the page
 
 ## Source of truth
 

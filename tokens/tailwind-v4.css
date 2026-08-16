@@ -117,6 +117,12 @@
   --text-mono: var(--font-size-mono);
   --text-mono--line-height: 1.4;
 
+  /* Ribbon subtitle, RibbonButton labels, and whatever an app puts in the
+     ribbon's actions slot beside them. Named so an app stops writing
+     `text-[12.5px]` to line up with a literal inside this package. */
+  --text-ribbon-meta: var(--font-size-ribbon-meta);
+  --text-ribbon-meta--line-height: 1.35;
+
   /* radii — three tokens and a pill, nothing else.
 
      `--radius` (no suffix) is Tailwind v4's deprecated-but-still-live key behind

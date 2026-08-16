@@ -5,7 +5,7 @@ app lives in its own repo and depends on this one. See `SETUP.md` for how
 to consume it.
 
 **Direction:** Terrazzo × Solstice · **Type:** Grotesk Standard
-(Space Grotesk / Onest / JetBrains Mono) · **v1.3.0** · Locked 2026-08-14.
+(Space Grotesk / Onest / JetBrains Mono) · **v1.4.0** · Locked 2026-08-14.
 
 | Path | What it is |
 |---|---|
@@ -16,7 +16,7 @@ to consume it.
 | `tokens/tokens.scss` | Primitives as SCSS vars — build-time math only. |
 | `tokens/spec.html` | Living spec. `<link>`s the real `tokens.css` rather than inlining a copy — keep it that way, or it becomes a second source of truth. Open directly in a browser; no build step. |
 | `tokens/SKILL.md` | Claude Code skill — copy into every consuming app repo. |
-| `src/` | React component library. Shell + data: `AppShell`, `RailAction`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`. Interaction primitives: `Dialog`/`DangerDialog`, `Select`, `Tabs`/`TabPanel`, `ToastProvider`/`useToast`, `DateField`, `Pagination`, `Tooltip`. |
+| `src/` | React component library. Shell + data: `AppShell`, `RailAction`, `SkipLink`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`. Interaction primitives: `Dialog`/`DangerDialog`, `Select`, `Tabs`/`TabPanel`, `ToastProvider`/`useToast`, `DateField`, `Pagination`, `Tooltip`. |
 | `src/contract.ts` | The DATA half — `DOMAIN_EDGE`, `cn`, `RAIL_PINNED_STORAGE_KEY`. No `"use client"`, so a React Server Component can read the real values. |
 | `SETUP.md` | **Start here** — how a separate app repo installs and wires this up. |
 
@@ -25,6 +25,7 @@ to consume it.
 1. Semantic tokens only — no hex, no raw px radii, no font names in app code.
 2. `#E8690A` = seal + ribbon gradient only. Fills `--action-primary`, text `--text-brand`.
 3. Status = pill + dot + word. Never color alone.
+   3b. Focus is one rule in `tokens.css` — a two-tone ring, never a local one.
 4. Digits are tabular, dates/IDs are mono.
 5. Domain edge colors: orange ops · teal roster · gold certs · green QA · plum training · blue facilities.
 

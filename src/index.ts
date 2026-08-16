@@ -6,16 +6,24 @@ export type { Tone, EdgeColor } from "./contract";
 
 export { Button, Chip, StatusTag, CertChip } from "./core";
 export type { ButtonProps, ChipProps, StatusTagProps, CertChipProps } from "./core";
-export { AppShell, RailAction, Ribbon, RibbonButton } from "./shell";
+export { AppShell, RailAction, Ribbon, RibbonButton, SkipLink } from "./shell";
 export type {
   AppShellProps,
   RailItem,
   RailActionProps,
   RailLinkRenderer,
   RibbonProps,
+  SkipLinkProps,
 } from "./shell";
 export { DomainCard, KpiCard, DataTable, FormField } from "./data";
-export type { DomainCardProps, KpiCardProps, Column, DataTableProps, FormFieldProps } from "./data";
+export type {
+  DomainCardProps,
+  KpiCardProps,
+  Column,
+  DataTableProps,
+  RowLinkRenderer,
+  FormFieldProps,
+} from "./data";
 export { Dialog, DangerDialog } from "./dialog";
 export type { DialogProps, DangerDialogProps } from "./dialog";
 export { Select } from "./select";

@@ -73,6 +73,9 @@ export default {
         h3: ["14.5px", { lineHeight: "1.3", letterSpacing: "-0.01em", fontWeight: "700" }],
         kpi: ["25px", { lineHeight: "1.1", letterSpacing: "-0.015em", fontWeight: "700" }],
         mono: ["12px", { lineHeight: "1.4" }],
+        /* Ribbon subtitle, RibbonButton labels, and app content in the ribbon's
+           actions slot. Added in 1.4.0 so app code stops copying the literal. */
+        "ribbon-meta": ["12.5px", { lineHeight: "1.35" }],
       },
       borderRadius: {
         sm: "var(--e911-radius-sm)",     /* 8px  — chips, inputs   */

@@ -3,6 +3,9 @@
    Direction: "Terrazzo × Solstice" · Type: "Grotesk Standard"
    Version: 1.0.0 · Locked 2026-08-14 · AA corrections in 1.2.0 (2026-08-15)
    Rail metrics + --layer-rail added in 1.3.0 (2026-08-15)
+   1.4.0 (2026-08-16): two-tone focus indicator (--focus-ring-halo, warm-990),
+   ribbon actions scrim, --font-size-ribbon-meta, and the dark border set lifted.
+   Every number in 1.4.0 came off painted pixels in Chrome, not off this file.
 
    THE RULE: application code uses TIER 2 (semantic) names only.
    Tier 1 primitives exist so Tier 2 has something to point at.
@@ -51,6 +54,15 @@
   --e911-warm-800: #40342A;
   --e911-warm-900: #31261C;
   --e911-warm-950: #211913;
+  /* Added in 1.4.0 for one job: the focus indicator's halo (--focus-ring-halo).
+     It is positioned by a ratio like warm-550, not by eye — it is the lightest
+     warm neutral that still clears 3:1 against the DARKEST fill the system
+     paints, --status-bad #A63A22 (3.04:1). warm-950 measured 2.59:1 there, so
+     the innermost band of a focused danger button was the one boundary in the
+     indicator that could not be seen. Not black: R>G>B keeps it in the family,
+     and the same value clears 3.11:1 against the ribbon's rust end, which is
+     what lets the halo carry the indicator where the ring cannot. */
+  --e911-warm-990: #0B0806;
 
   /* domain edge hues (card top-edges; one per app domain) */
   --e911-edge-orange: #C74F00;
@@ -154,11 +166,31 @@
   --action-secondary-border: var(--e911-warm-300);
   --focus-ring: var(--e911-orange-600);
 
-  /* ribbon (Solstice signature). White clears 4.5:1 over the first 60% of the
-     run and 3:1 over the first 90%; the gold terminus is 2.62:1. Ribbon text is
-     left-aligned and never reaches there, but right-aligned ACTIONS do — which
-     is why the primary action is an opaque pill with its own foreground rather
-     than text sitting on the gradient. See the audit's ribbon rows. */
+  /* The second tone of the focus indicator. See `.e911-app :focus-visible`:
+     ONE colour cannot clear 3:1 on every surface this system paints, because
+     the ribbon runs from a deep rust to a light gold inside a single element.
+     Measured on painted pixels, against the full light-mode ribbon:
+       --focus-ring (#C74F00) is 1.40:1 on the rust end and 1.95:1 on the gold;
+       this halo is 7.59:1 on the gold and 3.11:1 on the rust —
+     so the halo alone clears 3:1 across the whole run, and 4.36:1 between the
+     two tones keeps the indicator legible as a shape wherever one is swallowed.
+     Warm-990 rather than black: the system has no pure black, and a neutral
+     grey halo reads blue against these warm surfaces. See warm-990 in Tier 1
+     for why it is that dark and not warm-950. */
+  --focus-ring-halo: var(--e911-warm-990);
+
+  /* ribbon (Solstice signature). Measured across the painted band at 1024, 1440
+     and 1920px: --ribbon-text holds 4.5:1 to ~55% of the width, 3:1 to ~88%,
+     and bottoms out at 2.37:1 at the right edge. Ribbon PROSE is left-aligned
+     and never reaches there; right-aligned ACTIONS always do, which is why the
+     primary action is an opaque pill and the actions slot carries a scrim.
+
+     Darkening the gold stop was measured and rejected: white text needs a
+     background at or below L=0.183 for 4.5:1, and the light-mode terminus would
+     have to go from #D8912B (L=0.349) to about #A8681A (L=0.182) — the same
+     luminance as the #C74F00 stop at 58%. The gradient would stop brightening
+     at its midpoint, which is the whole of the Solstice sweep. The dark ribbon
+     would take the same flattening. A scrim costs nothing but a scrim. */
   --ribbon-gradient: linear-gradient(115deg, #A83B00, #C74F00 58%, #D8912B);
   --ribbon-text: #FFFFFF;
 
@@ -170,19 +202,26 @@
   --ribbon-action-surface: #FFFFFF;
   --ribbon-action-text:    var(--e911-orange-700);  /* 6.4:1 on the pill */
 
-  /* The ghost RibbonButton's ground. It sits at the RIGHT end of the ribbon,
-     which is the gold terminus where --ribbon-text is 2.62:1 — the one place
-     ribbon text actually lands in the failing zone. A scrim fixes it without
-     touching the Solstice gradient, which darkening the gold stop would have
-     destroyed. 35% carries the worst point of BOTH runs past 4.5:1 (4.89 light,
-     5.41 dark) and still reads translucent at the dark end (8.9 / 12.6), so the
-     button stays a ghost against the solid white primary. Not redefined in dark:
-     both gradients terminate at a comparable gold, so one alpha serves both.
-     The hover state DEEPENS the scrim rather than lightening it — the old
-     `hover:bg-white/10` moved the ground the wrong way, and a hover state is
-     still text on a background that owes 4.5:1. */
-  --ribbon-ghost-scrim:       rgba(33, 25, 19, 0.35);
-  --ribbon-ghost-scrim-hover: rgba(33, 25, 19, 0.50);
+  /* The ground under the whole actions cluster, not just under a button.
+
+     1.2.0 put this scrim on the ghost RibbonButton alone, and that button does
+     now measure 4.85–5.74:1 across every width — the fix worked. What it could
+     not fix is everything ELSE apps put in the slot: a freshness stamp, a
+     record count, a "last synced" line. Those are plain --ribbon-text on the
+     gradient at the far right, and they measured 3.06:1 (light) and 3.95:1
+     (dark) in the first consumer app. The slot is the system's affordance, so
+     the ground belongs to the slot.
+
+     0.35 is the floor, not a taste call: at the worst pixel of the painted
+     ribbon (light #DB983E, under the corner flourish) it carries white to
+     4.65:1 and cream to 5.09:1 in dark. 0.30 gives 4.22:1 and misses. One alpha
+     serves both themes — both gradients terminate at a comparable gold.
+
+     The ghost button keeps a fill of its own only for HOVER, deepening the
+     scrim rather than lightening it: the old `hover:bg-white/10` moved the
+     ground the wrong way, and a hover state is still text that owes 4.5:1. */
+  --ribbon-actions-scrim: rgba(33, 25, 19, 0.35);
+  --ribbon-ghost-hover:   rgba(33, 25, 19, 0.30);
 
   /* status — pill + dot + word, never color alone */
   --status-ok:        var(--e911-green-700);
@@ -232,6 +271,12 @@
   --font-size-h3: 14.5px;
   --font-size-kpi: 25px;           /* display 700, tabular-nums */
   --font-size-mono: 12px;
+  /* Ribbon subtitle, RibbonButton labels, and anything an app puts in the
+     ribbon's actions slot. It exists because those three were three separate
+     `text-[12.5px]` literals — two inside this system and one in the first
+     consuming app, copied out of the component to match it. A size that three
+     files agree on by eye is a token that has not been written down yet. */
+  --font-size-ribbon-meta: 12.5px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -250,9 +295,25 @@
     radial-gradient(circle, rgba(255, 235, 220, 0.05) 1px, transparent 1px)
     0 0 / 18px 18px;
 
-  --border-default: #3A2E26;
-  --border-strong:  #54443A;
-  --border-row:     #2C231C;
+  /* Lifted in 1.4.0. The old set measured, on painted pixels: row rule 1.13:1
+     on --surface-card, card border 1.32:1 on card and 1.44:1 on canvas. A
+     60-row table at 40px rows read from across a dim room came back as one
+     undifferentiated block, and the reason it is worse in dark than in light is
+     structural rather than aesthetic: --surface-card is only 1.09:1 against
+     --surface-canvas here, so in dark the BORDER is what says "card", not the
+     surface change. The audit waives these rows as "decorative separation; card
+     identified by domain edge + surface" — the second half of that sentence is
+     true in light and not true in dark.
+
+     Lifted about a third, to 1.44 / 1.86 / 2.64 against the card, and not to
+     the 3:1 that 1.4.11 asks of a boundary that identifies a control: 3:1 here
+     is #6E6055-ish on #1E1814, which turns a 350-row table into a spreadsheet
+     grid and is a different design, not a fixed one. --border-row lands exactly
+     on warm-800, which is the ramp step the light theme uses for the same job.
+     Light is untouched: those values were tuned in 1.2.0 and are legible. */
+  --border-default: #54443A;   /* 1.86:1 on card · 2.02:1 on canvas */
+  --border-strong:  #6B5A4D;   /* 2.64:1 on card */
+  --border-row:     var(--e911-warm-800);  /* 1.44:1 on card, was 1.13:1 */
 
   --text-primary:   #F7EFE8;
   --text-secondary: #B4A197;
@@ -268,8 +329,14 @@
 
   --action-primary:       var(--e911-orange-500);
   --action-primary-hover: var(--e911-orange-400);
-  --action-secondary-border: #54443A;
+  --action-secondary-border: var(--border-strong);
   --focus-ring: var(--e911-orange-300);
+  /* Same warm near-black as light. On a dark surface it is nearly invisible
+     (1.04:1 on --surface-card) and does nothing, which is correct — there the
+     bright --focus-ring carries the indicator at 8.76:1. It earns its place on
+     the one light-ish surface the dark theme still paints: the ribbon's gold
+     terminus, where --focus-ring is 1.9:1 and this is 5.95:1. */
+  --focus-ring-halo: var(--e911-warm-990);
 
   --ribbon-gradient: linear-gradient(115deg, #6F1600, #A83B00 58%, #B98300);
   --ribbon-text: #FFF4E8;
@@ -298,10 +365,56 @@
   letter-spacing: -0.004em;
   line-height: 1.5;
 }
+/* THE FOCUS INDICATOR. Two tones, drawn in one place for every control in the
+   system, because a per-component ring is how one variant ends up unringed.
+
+   Geometry, outward from the control's edge:
+     0–2px  halo   (box-shadow, --focus-ring-halo)
+     2–4px  ring   (outline, --focus-ring — painted over the halo)
+     4–5px  halo   (the rest of the same box-shadow)
+
+   WHY TWO TONES. A single ring is only ever measured against the surface it
+   lands on, and outline-offset puts it OUTSIDE the control — on whatever the
+   page put there. On flat surfaces one colour is enough (--focus-ring measures
+   4.28:1 on canvas, 4.62:1 on card, 8.76–9.44:1 in dark). On the ribbon it is
+   not: that single element runs from a deep rust to a light gold, and the ring
+   measured 1.25–1.35:1 on painted pixels in BOTH themes — the one surface in
+   the system where the indicator vanished completely. There is no third colour
+   that clears 3:1 on both ends of that gradient, so the indicator carries its
+   own contrast: the halo covers the light end, the ring covers the dark end,
+   and the two are 3.71:1 apart so the pair reads as a shape either way.
+
+   It also fixes a subtler thing on the primary button: --focus-ring and
+   --action-primary are the same orange in light mode, so a ring drawn 2px off
+   an orange fill was 1.00:1 against the control it was marking. The halo now
+   separates them.
+
+   `transition-property: none` is load-bearing. Tailwind's `transition` utility
+   — which every Button, Chip and rail row carries — lists outline-color and
+   box-shadow, so without this the indicator ANIMATES IN from the element's
+   resting outline-color, and outline-color's initial value is `currentColor`.
+   For 110ms the ring is therefore the button's LABEL colour: white on a white
+   card, #1A0E05 on a dark one. That first frame is what an audit tool samples
+   when it focuses an element and reads the style in the same tick, and it is
+   what got this reported as a 1.00:1 failure. A focus ring may not fade in.
+
+   No `border-radius` here any more. It used to set 4px, which — being unlayered
+   — beat the `rounded-sm` (8px) on every button in the system, so controls
+   visibly changed shape when focused. Outlines and box-shadow spread both
+   follow the element's own radius; there was nothing to fix. */
 .e911-app :focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 4px;
+  box-shadow: 0 0 0 5px var(--focus-ring-halo);
+  transition-property: none;
+}
+/* The ribbon re-points the ring, it does not opt out of it: on the gradient the
+   brand orange is invisible at both ends, and --ribbon-text is the one colour
+   already proven against the dark end of this exact surface. Scoped by class
+   rather than set on the component so both Tailwind ports get it from the same
+   line. */
+.e911-ribbon {
+  --focus-ring: var(--ribbon-text);
 }
 .e911-display {
   font-family: var(--e911-font-display);

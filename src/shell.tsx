@@ -63,6 +63,19 @@ export interface AppShellProps {
   /** Footer slot for controls that are not destinations — theme, avatar. Use
    *  <RailAction> inside it so they inherit the rail's alignment and labels. */
   railFooter?: React.ReactNode;
+  /**
+   * `id` of the <main> the skip link jumps to. It is a prop rather than a
+   * constant because an app may already have the id wired into a router or an
+   * anchor of its own; everything else about the skip link is the shell's.
+   */
+  mainId?: string;
+  /** Skip-link wording, for apps that speak differently. */
+  skipLinkLabel?: string;
+  /**
+   * Opt out of the skip link — only for an app that renders its own BEFORE
+   * <AppShell>. Two skip links is a worse first tab stop than one.
+   */
+  skipLink?: boolean;
   /** Controlled pin state. Pair with `onRailPinnedChange` to persist it. */
   railPinned?: boolean;
   /** Uncontrolled initial pin state. Unpinned, so the rail costs 64px until
@@ -199,6 +212,9 @@ export function AppShell({
   renderLink,
   footerItems,
   railFooter,
+  mainId = "main-content",
+  skipLinkLabel = "Skip to main content",
+  skipLink = true,
   railPinned,
   defaultRailPinned = false,
   onRailPinnedChange,
@@ -286,6 +302,12 @@ export function AppShell({
         "transition-[grid-template-columns] duration-base ease-e911"
       )}
     >
+      {/* FIRST in the DOM, and therefore first in tab order — which is the only
+          thing that makes a skip link work, and the reason it lives here rather
+          than in each app. The rail deliberately puts its pin control first
+          INSIDE the rail, so an app-level skip link would have to be rendered
+          before <AppShell> to precede it; the shell owns that boundary. */}
+      {skipLink ? <SkipLink targetId={mainId} label={skipLinkLabel} /> : null}
       <nav
         aria-label="Primary"
         data-expanded={open ? "true" : "false"}
@@ -356,8 +378,51 @@ export function AppShell({
           </div>
         ) : null}
       </nav>
-      <main className="min-w-0">{children}</main>
+      {/* tabIndex -1 so the skip link can actually MOVE focus here. Without it
+          the browser scrolls to the anchor and leaves focus on the link, so the
+          next Tab drops the operator straight back into the rail — the failure
+          that makes people believe skip links do nothing. */}
+      <main id={mainId} tabIndex={-1} className="min-w-0 outline-none">
+        {children}
+      </main>
     </div>
+  );
+}
+
+/* --------------------------------------------------------------- SkipLink */
+export interface SkipLinkProps {
+  /** `id` of the element to jump to — <main> in every current E911 app. */
+  targetId: string;
+  label?: string;
+  className?: string;
+}
+
+/**
+ * WCAG 2.4.1, and the one control in the system that is invisible until it is
+ * focused. `AppShell` renders one; this is exported for the rare page that has
+ * no shell (sign-in, a kiosk view) and still owes a bypass.
+ *
+ * Not `--tap-target` sized, deliberately: it only exists while it has keyboard
+ * focus, so nothing can ever reach it with a finger. Height follows the control
+ * scale like any other button.
+ *
+ * `z-popover`, not `z-rail`: the rail is the thing it has to appear over.
+ */
+export function SkipLink({ targetId, label = "Skip to main content", className }: SkipLinkProps) {
+  return (
+    <a
+      href={`#${targetId}`}
+      className={cn(
+        "sr-only focus:not-sr-only",
+        "focus:absolute focus:left-3 focus:top-3 focus:z-popover",
+        "focus:inline-flex focus:h-ctl focus:items-center focus:rounded-sm",
+        "focus:border focus:border-line focus:bg-card focus:px-3.5",
+        "focus:text-body focus:font-semibold focus:text-ink focus:shadow-pop",
+        className
+      )}
+    >
+      {label}
+    </a>
   );
 }
 
@@ -379,7 +444,11 @@ export function Ribbon({ eyebrow, title, subtitle, actions, className }: RibbonP
   return (
     <header
       className={cn(
-        "relative m-4 overflow-hidden rounded-lg bg-ribbon p-5",
+        // `e911-ribbon` is not decoration: tokens.css uses it to re-point
+        // --focus-ring for everything inside, because the brand orange ring is
+        // 1.25:1 on this gradient. Drop the class and every control in the
+        // ribbon loses its focus indicator, silently.
+        "e911-ribbon relative m-4 overflow-hidden rounded-lg bg-ribbon p-5",
         "text-[var(--ribbon-text)]",
         className
       )}
@@ -392,9 +461,20 @@ export function Ribbon({ eyebrow, title, subtitle, actions, className }: RibbonP
         <div className="text-[10.5px] font-semibold uppercase tracking-[0.1em]">{eyebrow}</div>
       ) : null}
       <h1 className="mt-1 font-display text-[24px] font-bold tracking-[-0.015em]">{title}</h1>
-      {subtitle ? <p className="mt-0.5 text-[12.5px] opacity-95">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-0.5 text-ribbon-meta opacity-95">{subtitle}</p> : null}
       {actions ? (
-        <div className="absolute right-5 top-1/2 flex -translate-y-1/2 gap-2 max-md:static max-md:mt-3 max-md:translate-y-0">
+        // The scrim is the slot's, not the button's. Anything right-aligned on
+        // this gradient lands in the gold terminus — measured 3.06:1 for plain
+        // --ribbon-text at 1920px — and apps put freshness stamps and counts in
+        // here beside the buttons. Padding so the plate reads as a ground for
+        // the cluster rather than a box drawn tight around it.
+        <div
+          className={cn(
+            "absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2",
+            "rounded-sm bg-[var(--ribbon-actions-scrim)] px-1.5 py-1",
+            "max-md:static max-md:mt-3 max-md:translate-y-0"
+          )}
+        >
           {actions}
         </div>
       ) : null}
@@ -412,19 +492,22 @@ export function RibbonButton({
     <button
       type={type ?? "button"}
       className={cn(
-        "h-[33px] rounded-[9px] px-3.5 text-[12.5px] transition duration-fast ease-e911",
+        "h-[33px] rounded-[9px] px-3.5 text-ribbon-meta transition duration-fast ease-e911",
         variant === "primary"
           ? // The pill and its label are ONE token pair. This read `bg-white
             // text-brand-text`, and --text-brand flips to a light orange in dark
             // mode while the pill stayed white — 2.01:1, the worst ratio in the
             // system. Whatever repaints the pill must repaint the label with it.
             "bg-[var(--ribbon-action-surface)] font-bold text-[var(--ribbon-action-text)] hover:brightness-95"
-          : // The scrim is load-bearing, not decoration: this button is the only
-            // ribbon text that is right-aligned, so it is the only one that lands
-            // on the gradient's gold terminus, where plain --ribbon-text is
-            // 2.62:1. Delete the bg and it fails AA on every page that has one.
-            "border border-white/50 bg-[var(--ribbon-ghost-scrim)] font-semibold text-[var(--ribbon-text)] " +
-            "hover:bg-[var(--ribbon-ghost-scrim-hover)]",
+          : // No resting fill of its own since 1.4.0: Ribbon's actions slot
+            // carries --ribbon-actions-scrim for everything in it, and stacking
+            // a second scrim here made the ghost darker than the plate it sits
+            // on. Hover still DEEPENS the ground rather than lightening it —
+            // the original `hover:bg-white/10` moved it the wrong way, and a
+            // hover state is still text that owes 4.5:1. Use this button inside
+            // <Ribbon actions>; that slot is where its ground comes from.
+            "border border-white/50 font-semibold text-[var(--ribbon-text)] " +
+            "hover:bg-[var(--ribbon-ghost-hover)]",
         className
       )}
       {...rest}
