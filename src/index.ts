@@ -1,13 +1,19 @@
 // Data first, and from "./contract" rather than "./core" — routing these through
 // a "use client" module hands server components a client-reference proxy instead
 // of the actual value, which breaks DomainCard's hue silently. See contract.ts.
-export { cn, DOMAIN_EDGE } from "./contract";
+export { cn, DOMAIN_EDGE, RAIL_PINNED_STORAGE_KEY, RAIL_PIN_LABEL } from "./contract";
 export type { Tone, EdgeColor } from "./contract";
 
 export { Button, Chip, StatusTag, CertChip } from "./core";
 export type { ButtonProps, ChipProps, StatusTagProps, CertChipProps } from "./core";
-export { AppShell, Ribbon, RibbonButton } from "./shell";
-export type { AppShellProps, RailItem, RibbonProps } from "./shell";
+export { AppShell, RailAction, Ribbon, RibbonButton } from "./shell";
+export type {
+  AppShellProps,
+  RailItem,
+  RailActionProps,
+  RailLinkRenderer,
+  RibbonProps,
+} from "./shell";
 export { DomainCard, KpiCard, DataTable, FormField } from "./data";
 export type { DomainCardProps, KpiCardProps, Column, DataTableProps, FormFieldProps } from "./data";
 export { Dialog, DangerDialog } from "./dialog";

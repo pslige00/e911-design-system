@@ -12,6 +12,25 @@ export type { Tone, EdgeColor } from "./contract";
 
 import { cn, type EdgeColor, type Tone } from "./contract";
 
+/* ------------------------------------------------------------- focus util */
+/**
+ * Shared by every component that reveals something on focus (Tooltip, the rail).
+ * The distinction matters: a plain `onFocus` fires when a POINTER clicks a
+ * control too, so keying off it leaves a tooltip hanging over the page you just
+ * navigated to, and leaves the rail expanded over the content you just clicked
+ * through to. `:focus-visible` is the browser's own answer to "did a keyboard
+ * put focus here", and it is the only one that stays right across pointer types.
+ */
+export function isFocusVisible(el: Element): boolean {
+  try {
+    return el.matches(":focus-visible");
+  } catch {
+    // Very old engines don't know the selector; showing the label is the safer
+    // failure than never showing it to a keyboard user.
+    return true;
+  }
+}
+
 /* ----------------------------------------------------------------- Button */
 type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
 export interface ButtonProps

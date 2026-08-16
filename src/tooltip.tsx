@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "./core";
+import { cn, isFocusVisible } from "./core";
 
 /** Long enough that sweeping the rail doesn't strobe tooltips at you. */
 const DEFAULT_DELAY_MS = 350;
@@ -35,16 +35,6 @@ export interface TooltipProps {
   /** The rail should pass "right"; a 64px column has no room above its icons. */
   placement?: TooltipPlacement;
   delay?: number;
-}
-
-function isFocusVisible(el: Element): boolean {
-  try {
-    return el.matches(":focus-visible");
-  } catch {
-    // Very old engines don't know the selector; showing the tooltip is the
-    // safer failure than never showing it to a keyboard user.
-    return true;
-  }
 }
 
 /**

@@ -263,6 +263,12 @@ const PAIRS = [
   { role: "Tab (inactive)", where: "Tabs", fg: "--text-secondary", bg: ["--surface-canvas", "--surface-card"], px: 13.5, weight: 500 },
   { role: "KPI sub / delta", where: "KpiCard", fg: "--text-secondary", bg: ["--surface-card", "--surface-tint"], px: 11.5, weight: 400 },
   { role: "Empty state", where: "DataTable empty", fg: "--text-secondary", bg: ["--surface-card"], px: 12.5, weight: 400 },
+  // The rail is `bg-card` collapsed AND expanded, so the label's ground is the
+  // same pair in both states — there is no "expanded rail colour" to get wrong.
+  // Icon and label are one colour: the label is TEXT and owes 4.5:1, and the
+  // icon used to be --text-tertiary, which would have made a nav row two tones.
+  { role: "Rail item label", where: "AppShell rail (idle)", fg: "--text-secondary", bg: ["--surface-card"], px: 13.5, weight: 500 },
+  { role: "Rail item (hover)", where: "AppShell rail:hover", fg: "--text-primary", bg: ["--surface-tint"], px: 13.5, weight: 500 },
   { role: "Dialog description", where: "Dialog", fg: "--text-secondary", bg: ["--surface-card"], px: 12.5, weight: 400 },
   { role: "Calendar nav arrows", where: "DateField", fg: "--text-secondary", bg: ["--surface-card"], kind: "ui" },
 
@@ -275,13 +281,14 @@ const PAIRS = [
   { role: "Calendar weekday head", where: "DateField", fg: "--text-tertiary", bg: ["--surface-card"], px: 11, weight: 600 },
   { role: "Calendar outside day", where: "DateField", fg: "--text-tertiary", bg: ["--surface-card", "--surface-tint"], px: 12, weight: 400 },
   { role: "Pagination ellipsis", where: "Pagination", fg: "--text-tertiary", bg: ["--surface-canvas", "--surface-card"], px: 12.5, weight: 400 },
-  { role: "Rail icon (inactive)", where: "AppShell", fg: "--text-tertiary", bg: ["--surface-card"], kind: "ui" },
   { role: "Dismiss icon", where: "Dialog / Toast", fg: "--text-tertiary", bg: ["--surface-card"], kind: "ui" },
   { role: "Select chevron", where: "Select", fg: "--text-tertiary", bg: ["--surface-card"], kind: "ui" },
   { role: "Calendar disabled day", where: "DateField", fg: "--text-tertiary", bg: ["--surface-card"], kind: "disabled" },
 
   // ---- brand / action ---------------------------------------------------
   { role: "Brand text link", where: "Chip active / Tabs active", fg: "--text-brand", bg: ["--surface-card", "--surface-brand-soft"], px: 12, weight: 600 },
+  // Active destination, and the pin while pressed — same treatment, so one row.
+  { role: "Rail item (active/pinned)", where: "AppShell rail", fg: "--text-brand", bg: ["--surface-brand-soft"], px: 13.5, weight: 600 },
   { role: "Primary button label", where: "Button variant=primary", fg: "--text-on-action", bg: ["--action-primary"], px: 13.5, weight: 600 },
   { role: "Primary button label (hover)", where: "Button variant=primary:hover", fg: "--text-on-action", bg: ["--action-primary-hover"], px: 13.5, weight: 600 },
   { role: "Danger button label", where: "Button variant=danger", fg: "--text-on-danger", bg: ["--status-bad"], px: 13.5, weight: 600 },

@@ -30,6 +30,26 @@ export const DOMAIN_EDGE: Record<
   facilities: "blue",
 };
 
+/* ------------------------------------------------------------------- rail */
+/**
+ * Where an app stores the rail's pin. One key across every E911 app, because a
+ * dispatcher who pins the rail in TimeSweep and then opens the QA app on the
+ * same wall tablet has expressed a preference about rails, not about TimeSweep.
+ * AppShell deliberately does NOT read or write it: the shell renders on the
+ * server first, and a component that reaches for localStorage during render is
+ * a hydration mismatch. Persisting is the app's call — see SKILL.md.
+ */
+export const RAIL_PINNED_STORAGE_KEY = "e911.rail-pinned";
+
+/**
+ * The pin's accessible name. Constant across both states BY DESIGN: the button
+ * carries `aria-pressed`, and flipping the label to "Unpin" as well announces
+ * the state twice and inverts it for anyone who hears only one of the two.
+ * Here rather than in shell.tsx so a server component can label a skeleton rail
+ * with the same string.
+ */
+export const RAIL_PIN_LABEL = "Pin navigation";
+
 /* ---------------------------------------------------------------- utils -- */
 /**
  * Class-name join. Lives here rather than in core.tsx for the same reason as

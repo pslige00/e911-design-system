@@ -5,7 +5,7 @@ app lives in its own repo and depends on this one. See `SETUP.md` for how
 to consume it.
 
 **Direction:** Terrazzo × Solstice · **Type:** Grotesk Standard
-(Space Grotesk / Onest / JetBrains Mono) · **v1.0.0** · Locked 2026-08-14.
+(Space Grotesk / Onest / JetBrains Mono) · **v1.3.0** · Locked 2026-08-14.
 
 | Path | What it is |
 |---|---|
@@ -14,9 +14,10 @@ to consume it.
 | `tokens/tailwind-v4.css` | Tailwind **v4** port producing the same utility names. Both are maintained; neither is deprecated. Add any new utility to **both**. |
 | `tokens/tokens.json` | Machine-readable export (Style Dictionary shape). |
 | `tokens/tokens.scss` | Primitives as SCSS vars — build-time math only. |
-| `tokens/spec.html` | Living spec, tokens inlined. Open directly in a browser — no build step. |
+| `tokens/spec.html` | Living spec. `<link>`s the real `tokens.css` rather than inlining a copy — keep it that way, or it becomes a second source of truth. Open directly in a browser; no build step. |
 | `tokens/SKILL.md` | Claude Code skill — copy into every consuming app repo. |
-| `src/` | React component library. Shell + data: `AppShell`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`. Interaction primitives: `Dialog`/`DangerDialog`, `Select`, `Tabs`/`TabPanel`, `ToastProvider`/`useToast`, `DateField`, `Pagination`, `Tooltip`. |
+| `src/` | React component library. Shell + data: `AppShell`, `RailAction`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`. Interaction primitives: `Dialog`/`DangerDialog`, `Select`, `Tabs`/`TabPanel`, `ToastProvider`/`useToast`, `DateField`, `Pagination`, `Tooltip`. |
+| `src/contract.ts` | The DATA half — `DOMAIN_EDGE`, `cn`, `RAIL_PINNED_STORAGE_KEY`. No `"use client"`, so a React Server Component can read the real values. |
 | `SETUP.md` | **Start here** — how a separate app repo installs and wires this up. |
 
 ## The five rules (short form)
@@ -31,7 +32,9 @@ to consume it.
 
 ```bash
 npm install
+npm test              # typecheck + the contrast audit — the AA floor is a build gate
 npm run typecheck     # checks src/ against tsconfig.json
+npm run audit:contrast  # every text/surface pair, both themes, read from tokens.css
 ```
 
 Open `tokens/spec.html` directly in a browser to review token changes —

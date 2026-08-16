@@ -86,12 +86,15 @@ export default {
       },
       spacing: {
         rail: "var(--rail-width)",
+        "rail-expanded": "var(--rail-width-expanded)", /* w-rail-expanded — the
+                                            hover/pinned width of the icon rail */
         row: "var(--row-height)",
         ctl: "var(--control-height)",
         "ctl-sm": "var(--control-height-sm)",
         tap: "var(--tap-target)", /* min-h-tap / size-tap — the touch floor */
       },
       zIndex: {
+        rail: "var(--layer-rail)",
         popover: "var(--layer-popover)",
         dialog: "var(--layer-dialog)",
         toast: "var(--layer-toast)",
