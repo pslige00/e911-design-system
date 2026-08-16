@@ -392,6 +392,35 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   forward `size` into its child props: `size` on an `<input>` is a real HTML
   attribute meaning width in characters, and `{...props}` would set it. Pass it
   to both.
+
+  **`cn` is a plain join, so a className you pass may or may not win — and you
+  cannot tell from the order you wrote it in.** There is no tailwind-merge here:
+  both classes reach the DOM, and the winner is decided by which rule Tailwind
+  emits LAST, which is a property of the utility's KIND rather than of your
+  string. Measured on a real compiled build of this package's tokens:
+
+  | | emitted at | wins |
+  |---|---|---|
+  | `h-20` (core spacing scale) | line 167 | |
+  | `h-ctl` (theme, from `--spacing-ctl`) | line 170 | **theme** |
+  | `text-body` (theme, from the type scale) | line 176 | |
+  | a bare `text-[18px]` (arbitrary) | line 181 | **arbitrary** |
+
+  So the order is **core → theme → arbitrary**, and both of these are true at
+  once: a component's `h-ctl` BEATS a caller's `h-20`, and the same component's
+  `text-body` LOSES to a caller's bare px literal. Reversing the class order in
+  `cn` changes neither.
+
+  This is written down because the obvious generalisation from the `h-tap` case
+  above is the wrong one in one of the two directions. A consuming app read that
+  note, reasoned that a component's own utility always wins, and concluded its
+  kiosk labels must be rendering at the component's 13.5px — they were rendering
+  at the literal's 18px the whole time, because an arbitrary value outranks the
+  theme. The opposite mistake is the same shape: assuming a caller's `h-20` will
+  raise a control, when `h-ctl` clamps it back to 32px and nothing says so.
+
+  **The rule that survives both: never size a system component from the outside.**
+  Use `size`. If a size you need does not exist, it is a token, not a className.
 - **Tables:** 40px rows, `--surface-sunken` header with `--font-size-micro`
   (10.5px) caps labels, row borders `--border-row`, mono for dates/IDs, cert
   codes as bordered mono chips.
