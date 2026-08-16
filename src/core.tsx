@@ -25,7 +25,10 @@ const buttonVariant: Record<ButtonVariant, string> = {
   secondary:
     "border border-line-strong bg-card text-ink font-medium hover:bg-tint",
   quiet: "text-muted font-medium hover:bg-tint hover:text-ink",
-  danger: "bg-bad text-white font-semibold hover:brightness-95",
+  // text-bad-fg, not text-white: --status-bad inverts between themes (dark red
+  // in light, light salmon in dark), so one fixed white label measured 2.95:1 in
+  // dark — the destructive action was the least readable button in the system.
+  danger: "bg-bad text-bad-fg font-semibold hover:brightness-95",
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(

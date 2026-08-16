@@ -41,7 +41,14 @@ export default {
 
         ok: { DEFAULT: "var(--status-ok)", soft: "var(--status-ok-soft)" },
         warn: { DEFAULT: "var(--status-warn)", soft: "var(--status-warn-soft)" },
-        bad: { DEFAULT: "var(--status-bad)", soft: "var(--status-bad-soft)" },
+        // `fg` is the label on a --status-bad FILL. Not Tailwind's `white`:
+        // --status-bad is a dark red in light and a light salmon in dark, so one
+        // fixed white label measures 6.5:1 in one theme and 2.95:1 in the other.
+        bad: {
+          DEFAULT: "var(--status-bad)",
+          soft: "var(--status-bad-soft)",
+          fg: "var(--text-on-danger)",
+        },
 
         edge: {
           orange: "var(--e911-edge-orange)",

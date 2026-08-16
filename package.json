@@ -1,6 +1,6 @@
 {
   "name": "@e911/design-system",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "E911 design system — Terrazzo × Solstice / Grotesk Standard. Tokens + components + Claude Code skill for any E911 app, in any repo.",
   "type": "module",
   "exports": {
@@ -25,6 +25,8 @@
     "typescript": "^5.6.0"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:contrast": "node scripts/contrast-audit.mjs",
+    "test": "npm run typecheck && npm run audit:contrast"
   }
 }

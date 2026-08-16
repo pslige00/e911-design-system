@@ -162,8 +162,17 @@ export function RibbonButton({
       className={cn(
         "h-[33px] rounded-[9px] px-3.5 text-[12.5px] transition duration-fast ease-e911",
         variant === "primary"
-          ? "bg-white font-bold text-brand-text hover:bg-white/90"
-          : "border border-white/50 font-semibold text-[var(--ribbon-text)] hover:bg-white/10",
+          ? // The pill and its label are ONE token pair. This read `bg-white
+            // text-brand-text`, and --text-brand flips to a light orange in dark
+            // mode while the pill stayed white — 2.01:1, the worst ratio in the
+            // system. Whatever repaints the pill must repaint the label with it.
+            "bg-[var(--ribbon-action-surface)] font-bold text-[var(--ribbon-action-text)] hover:brightness-95"
+          : // The scrim is load-bearing, not decoration: this button is the only
+            // ribbon text that is right-aligned, so it is the only one that lands
+            // on the gradient's gold terminus, where plain --ribbon-text is
+            // 2.62:1. Delete the bg and it fails AA on every page that has one.
+            "border border-white/50 bg-[var(--ribbon-ghost-scrim)] font-semibold text-[var(--ribbon-text)] " +
+            "hover:bg-[var(--ribbon-ghost-scrim-hover)]",
         className
       )}
       {...rest}

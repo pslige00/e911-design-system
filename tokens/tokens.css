@@ -1,13 +1,18 @@
 /* ============================================================================
    E911 DESIGN SYSTEM — tokens.css
    Direction: "Terrazzo × Solstice" · Type: "Grotesk Standard"
-   Version: 1.0.0 · Locked 2026-08-14
+   Version: 1.0.0 · Locked 2026-08-14 · AA corrections in 1.2.0 (2026-08-15)
 
    THE RULE: application code uses TIER 2 (semantic) names only.
    Tier 1 primitives exist so Tier 2 has something to point at.
    Never hard-code a hex, px radius, or font-family in app code.
 
-   All text/surface pairs verified WCAG 2.1 AA (ratios noted inline).
+   WCAG 2.1 AA is enforced by `npm run audit:contrast`, NOT by the ratios in the
+   comments below. Until 1.2.0 this header claimed every text/surface pair was
+   verified while --text-tertiary shipped at 3.21:1 and the dark-mode ribbon
+   button label at 2.01:1. A comment cannot fail a build, so the comments drifted
+   and the claim quietly became false. The ratios below are documentation; the
+   script is the control. Change a colour here and run it.
    ========================================================================== */
 
 /* ---------------------------------------------------------------------------
@@ -31,6 +36,15 @@
   --e911-warm-300: #D9CEBD;
   --e911-warm-400: #B6A794;
   --e911-warm-500: #9A8977;
+  --e911-warm-550: #786856;   /* the only ramp step that is positioned by a ratio
+                                 rather than by eye: it is the lightest warm
+                                 neutral that clears 4.5:1 on --surface-tint, the
+                                 darkest light-mode surface. --text-tertiary sits
+                                 here. Nudge it lighter and every table header,
+                                 KPI label and field hint in every E911 app drops
+                                 below AA at once — which is exactly what 500 did
+                                 until 1.2.0. Sits nearer 600 than 500; that is
+                                 the ratio's doing, not a taste call. */
   --e911-warm-600: #6C5C4B;
   --e911-warm-700: #52443A;
   --e911-warm-800: #40342A;
@@ -97,10 +111,41 @@
 
   /* text — ratios on canvas #F8F6F3 */
   --text-primary:   var(--e911-warm-900);   /* 13.7:1 */
-  --text-secondary: var(--e911-warm-600);   /*  6.4:1 */
-  --text-tertiary:  var(--e911-warm-500);   /* labels ≥12px semibold only */
+  --text-secondary: var(--e911-warm-600);   /*  6.0:1 */
+
+  /* --text-tertiary: 4.98:1 on canvas, 5.11:1 on sunken, 4.61:1 on tint.
+     Was warm-500, which measured 3.21:1 under DataTable's column headers and
+     2.90:1 under DateField's outside-month days — failures at any size, found in
+     UAT rather than here. Its old comment ("labels ≥12px semibold only") encoded
+     the mistake: there is no size below 24px that buys relief from 4.5:1, and
+     the headers were 10.5px anyway.
+
+     The fix is the VALUE, deliberately, because the tier has eleven consumers
+     across six components — column headers, KPI labels, field hints, select
+     placeholders, calendar weekday heads and outside days, pagination ellipsis,
+     and four icon roles. Rejected alternatives, all of which fix one instance
+     and leave the other ten:
+       · re-role column headers to --text-secondary — collapses a three-tier
+         hierarchy to two and makes the header as loud as the data under it;
+       · raise headers to 14pt bold (18.66px) so the 3:1 large-text allowance
+         applies — a 19px column header outranks the 14.5px card title above it
+         and breaks the 40px row rhythm the density is built on;
+       · darken --surface-sunken behind the header — sunken is 1.5% off card, so
+         no surface move carries 3.21 to 4.5.
+     Anchored to --surface-tint (the darkest light surface) rather than to the
+     header's own --surface-sunken, so tertiary text is legal on ANY system
+     surface and the next component to use it cannot re-open this. */
+  --text-tertiary:  var(--e911-warm-550);
+
   --text-on-action: #FFFFFF;                /* 4.6:1 on action */
-  --text-brand:     var(--e911-orange-700); /* 6.0:1 */
+  --text-brand:     var(--e911-orange-700); /* 6.4:1 on card */
+
+  /* Foreground for a --status-bad FILL (Button variant="danger"). Separate from
+     --text-brand/--text-on-action because --status-bad inverts between themes:
+     it is a dark red in light and a light salmon in dark, so one hard-coded
+     white label cannot serve both. The component used `text-white` and measured
+     2.95:1 in dark. Light keeps #FFFFFF, so light renders unchanged. */
+  --text-on-danger: #FFFFFF;                /* 6.5:1 on --status-bad */
 
   /* actions */
   --action-primary:       var(--e911-orange-600);
@@ -108,9 +153,35 @@
   --action-secondary-border: var(--e911-warm-300);
   --focus-ring: var(--e911-orange-600);
 
-  /* ribbon (Solstice signature) — white text ≥4.6:1 across the run */
+  /* ribbon (Solstice signature). White clears 4.5:1 over the first 60% of the
+     run and 3:1 over the first 90%; the gold terminus is 2.62:1. Ribbon text is
+     left-aligned and never reaches there, but right-aligned ACTIONS do — which
+     is why the primary action is an opaque pill with its own foreground rather
+     than text sitting on the gradient. See the audit's ribbon rows. */
   --ribbon-gradient: linear-gradient(115deg, #A83B00, #C74F00 58%, #D8912B);
   --ribbon-text: #FFFFFF;
+
+  /* The primary RibbonButton's pill. Tokenised as a PAIR because the two halves
+     were free to desync and did: the pill was a hard-coded `bg-white` in both
+     themes while its label used --text-brand, which flips to a light orange in
+     dark — 2.01:1, the worst ratio in the system. The pill is white in both
+     themes, so its label is the light-mode brand text in both themes. */
+  --ribbon-action-surface: #FFFFFF;
+  --ribbon-action-text:    var(--e911-orange-700);  /* 6.4:1 on the pill */
+
+  /* The ghost RibbonButton's ground. It sits at the RIGHT end of the ribbon,
+     which is the gold terminus where --ribbon-text is 2.62:1 — the one place
+     ribbon text actually lands in the failing zone. A scrim fixes it without
+     touching the Solstice gradient, which darkening the gold stop would have
+     destroyed. 35% carries the worst point of BOTH runs past 4.5:1 (4.89 light,
+     5.41 dark) and still reads translucent at the dark end (8.9 / 12.6), so the
+     button stays a ghost against the solid white primary. Not redefined in dark:
+     both gradients terminate at a comparable gold, so one alpha serves both.
+     The hover state DEEPENS the scrim rather than lightening it — the old
+     `hover:bg-white/10` moved the ground the wrong way, and a hover state is
+     still text on a background that owes 4.5:1. */
+  --ribbon-ghost-scrim:       rgba(33, 25, 19, 0.35);
+  --ribbon-ghost-scrim-hover: rgba(33, 25, 19, 0.50);
 
   /* status — pill + dot + word, never color alone */
   --status-ok:        var(--e911-green-700);
@@ -175,9 +246,15 @@
 
   --text-primary:   #F7EFE8;
   --text-secondary: #B4A197;
-  --text-tertiary:  #89756B;
+  /* 5.53:1 on canvas, 5.34:1 on sunken, 4.64:1 on tint. Was #89756B (4.20:1
+     under column headers). Anchored to --surface-tint, the LIGHTEST dark
+     surface — the mirror of the light rule, and the same reason. */
+  --text-tertiary:  #9A877D;
   --text-on-action: #1A0E05;
   --text-brand:     var(--e911-orange-300);
+  /* --status-bad is a light salmon here, so the danger label goes dark. 5.9:1;
+     white on it was 2.95:1. */
+  --text-on-danger: var(--e911-warm-950);
 
   --action-primary:       var(--e911-orange-500);
   --action-primary-hover: var(--e911-orange-400);
@@ -186,6 +263,11 @@
 
   --ribbon-gradient: linear-gradient(115deg, #6F1600, #A83B00 58%, #B98300);
   --ribbon-text: #FFF4E8;
+  /* Unchanged from light on purpose: the pill stays white in dark mode, so its
+     label must stay the dark brand orange. Pointing this at --text-brand is the
+     bug that produced 2.01:1. */
+  --ribbon-action-surface: #FFFFFF;
+  --ribbon-action-text:    var(--e911-orange-700);
 
   --status-ok:   #5BC46F;  --status-ok-soft:   rgba(91, 196, 111, 0.14);
   --status-warn: #E7B93C;  --status-warn-soft: rgba(231, 185, 60, 0.14);

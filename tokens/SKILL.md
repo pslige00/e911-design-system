@@ -22,9 +22,15 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
    `--text-brand` (#A83B00). Orange is never a warning color.
 4. **Status is pill + dot + word.** Never color alone. Use `ok / warn / bad`
    token pairs (`--status-warn` on `--status-warn-soft`).
-5. **AA floor.** Body text ≥ 4.5:1 on its surface. Anything smaller than 12px
-   must be ≥ semibold and uppercase-label styled. Focus states use
-   `--focus-ring`, 2px, offset 2.
+5. **AA floor.** ALL text ≥ 4.5:1 on its surface — not just body text. Weight
+   and uppercase styling buy nothing: the 3:1 allowance starts at 24px, or
+   18.66px if bold, and no component in this system is anywhere near that. This
+   rule used to read "anything smaller than 12px must be ≥ semibold and
+   uppercase-label styled", which is what let `--text-tertiary` ship at 3.21:1
+   under every table header in TimeSweep until 1.2.0. Non-text UI that conveys
+   state (focus ring, active underline, domain edge) needs 3:1. Focus states use
+   `--focus-ring`, 2px, offset 2. `npm run audit:contrast` checks every pair in
+   both themes; run it after touching a colour.
 6. **Dark mode is free — keep it free.** Never branch on theme in app code;
    `[data-theme="dark"]` swaps the same semantic names.
 7. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component

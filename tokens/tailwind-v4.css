@@ -58,6 +58,10 @@
   --color-warn-soft: var(--status-warn-soft);
   --color-bad:       var(--status-bad);
   --color-bad-soft:  var(--status-bad-soft);
+  /* Foreground for a --status-bad FILL. Not Tailwind's `white`: --status-bad is
+     a dark red in light and a light salmon in dark, so one fixed white label
+     measures 6.5:1 in one theme and 2.95:1 in the other. */
+  --color-bad-fg:    var(--text-on-danger);
 
   /* domain edges — one domain, one hue, everywhere */
   --color-edge-orange: var(--e911-edge-orange);
