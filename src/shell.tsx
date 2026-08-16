@@ -227,6 +227,79 @@ export function AppShell({
   const [focusOpen, setFocusOpen] = React.useState(false);
   const open = pinned || hoverOpen || focusOpen;
 
+  /* THE DRAWER (1.9.0). Below `md` the rail was `display: none` with nothing in
+     its place — no menu button, no tab bar, nothing else in the DOM reaching
+     any other route. Every destination, the theme toggle, the pin and sign-out
+     were inside that one hidden box, so on a phone this app had no navigation
+     at all. It surfaced as "an employee cannot sign out", but sign-out was only
+     the first thing anyone happened to need: employees land on /clock, the one
+     screen built as the PWA home and therefore the one most likely to be opened
+     under 768px. Every other role lands on /now, which nobody had opened on a
+     phone because desk machines and wall tablets are the stated primary surface.
+
+     A bottom tab bar was considered and does not fit: this app's roles carry ten
+     destinations plus the theme toggle and sign-out, and a tab bar holds four or
+     five before it needs an overflow menu — which is this drawer, reached one
+     tap later. So the drawer IS the pattern rather than a fallback behind one.
+
+     It reuses the rail's own expanded presentation rather than introducing a
+     second navigation vocabulary: same rows, same 44px targets, same labels,
+     same focus indicator. Below `md` the nav becomes a fixed panel that slides
+     in; above it, nothing about the rail changes. */
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const menuButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  const navRef = React.useRef<HTMLElement | null>(null);
+
+  // Escape closes, and focus goes back to the control that opened it — losing
+  // focus to <body> is how a keyboard operator ends up tabbing the page behind.
+  React.useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDrawerOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+
+  // Focus into the panel on open. Without this the drawer is visible and the
+  // next Tab is still somewhere in the page behind it.
+  React.useEffect(() => {
+    if (drawerOpen) navRef.current?.focus();
+  }, [drawerOpen]);
+
+  /* CLOSE IT WHEN THE VIEWPORT CROSSES BACK ABOVE `md`, and this one is not
+     cosmetic. Every other part of the drawer is scoped in CSS by `max-md:`, so
+     crossing the breakpoint fixes itself — but `inert` on <main> is React state
+     and cannot be. Leave it and a drawer opened below 768px keeps <main> inert
+     after the viewport grows: the rail is a normal column again, the drawer is
+     gone, and the entire page is unfocusable and invisible to a screen reader
+     with nothing on screen explaining why and no control left to undo it.
+
+     A tablet rotating from portrait to landscape is exactly this, and 768px is
+     the width a portrait tablet sits at — the likeliest device in this app's
+     estate to cross the line with the drawer open, not a contrived case.
+
+     matchMedia rather than a resize handler: it fires on the transition itself
+     rather than on every intermediate pixel. The literal 48rem must stay in
+     step with Tailwind's `md`; there is no way to read a breakpoint back out of
+     a utility, which is the one thing here that could silently drift. */
+  React.useEffect(() => {
+    if (!drawerOpen) return;
+    const mq = window.matchMedia("(min-width: 48rem)");
+    if (mq.matches) {
+      setDrawerOpen(false);
+      return;
+    }
+    const onChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setDrawerOpen(false);
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [drawerOpen]);
+
   const timer = React.useRef(0);
   const clearHoverTimer = React.useCallback(() => {
     window.clearTimeout(timer.current);
@@ -318,7 +391,94 @@ export function AppShell({
           INSIDE the rail, so an app-level skip link would have to be rendered
           before <AppShell> to precede it; the shell owns that boundary. */}
       {skipLink ? <SkipLink targetId={mainId} label={skipLinkLabel} /> : null}
+      {/* THE MOBILE BAR. Only below `md`, where the rail is a drawer rather than
+          a column. It gives the seal a home and the trigger a predictable place;
+          a floating button was the alternative and would have overlapped page
+          content on the smallest screens this app runs on.
+
+          `h-tap` not a smaller bar: it holds a control, and --tap-target is the
+          floor for anything a finger reaches. It is sticky for the same reason
+          the rail is — a control that scrolls away is a control you have to
+          hunt for, which is the bug one layer up. */}
+      <div className="sticky top-0 z-rail flex h-tap shrink-0 items-center justify-between border-b border-line bg-card px-2.5 md:hidden">
+        <span
+          aria-hidden
+          className="grid size-[30px] place-items-center rounded-pill bg-brand text-seal font-extrabold text-white"
+        >
+          911
+        </span>
+        <button
+          ref={menuButtonRef}
+          type="button"
+          // aria-expanded is the state; the label stays constant across it, the
+          // same rule the rail's pin follows. Saying "Open"/"Close" as well
+          // announces the state twice and inverts it for anyone hearing one.
+          aria-label="Navigation"
+          aria-expanded={drawerOpen}
+          aria-controls={`${mainId}-rail`}
+          onClick={() => setDrawerOpen((v) => !v)}
+          className="grid size-tap place-items-center rounded-sm text-muted hover:bg-tint hover:text-ink"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="size-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            {drawerOpen ? (
+              <>
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </>
+            ) : (
+              <>
+                <path d="M4 7h16" />
+                <path d="M4 12h16" />
+                <path d="M4 17h16" />
+              </>
+            )}
+          </svg>
+        </button>
+      </div>
+      {/* Backdrop. Tapping outside a drawer to dismiss it is the gesture people
+          try first, and without it the only way out is the X — which is exactly
+          the "no emergency exit" complaint. z-rail so it covers the page but
+          sits under the panel itself. */}
+      {drawerOpen ? (
+        <div
+          aria-hidden
+          onClick={() => setDrawerOpen(false)}
+          // The SAME expression Dialog's overlay uses, deliberately — one scrim
+          // in the system, not two that drift.
+          //
+          // It is spelled as a whole colour rather than as an opacity modifier
+          // because `bg-[var(--token)]/50` COMPILES TO NOTHING: Tailwind cannot
+          // apply an opacity modifier to an arbitrary var(). The first draft of
+          // this line was exactly that, and it emitted no rule at all — a fully
+          // transparent backdrop that still swallowed every tap, which reads as
+          // a dead page rather than as a missing colour. Caught by grepping the
+          // compiled CSS for the rule, which is the only thing that would have.
+          className="fixed inset-0 z-rail bg-[color-mix(in_srgb,var(--surface-canvas)_80%,transparent)] md:hidden"
+        />
+      ) : null}
       <nav
+        id={`${mainId}-rail`}
+        ref={navRef}
+        // -1 so the panel itself can take focus when the drawer opens. It is not
+        // a tab stop otherwise.
+        tabIndex={-1}
+        // A tap on any destination navigates, and a drawer still covering the
+        // page it just navigated to is the thing that makes people think the tap
+        // failed. Delegated rather than wired into renderRow because the row may
+        // be an app-supplied <Link>, and this must not depend on which.
+        onClick={(e) => {
+          if (drawerOpen && (e.target as HTMLElement).closest("a,button")) {
+            setDrawerOpen(false);
+          }
+        }}
         aria-label="Primary"
         data-expanded={open ? "true" : "false"}
         data-pinned={pinned ? "true" : "false"}
@@ -383,7 +543,22 @@ export function AppShell({
           // The NAV itself does not scroll — the destinations region below
           // does. See there for why the split matters.
           "overflow-hidden",
-          "border-r border-line bg-card px-2.5 py-3.5 max-md:hidden",
+          "border-r border-line bg-card px-2.5 py-3.5",
+          // BELOW md THIS IS THE DRAWER. It was `max-md:hidden` — the whole bug.
+          // Fixed rather than sticky here: it must cover the page, not sit
+          // beside it, and it leaves the one-column grid flow so <main> keeps
+          // the full width. z-dialog, not z-rail: the backdrop is at z-rail and
+          // the panel has to be above it.
+          "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-dialog",
+          // Always the expanded presentation on a phone. There is no hover to
+          // peek with and no room for an icon-only column beside content, so the
+          // drawer is the labelled rail or it is nothing. The label opacity is
+          // forced in CSS rather than from React state so that a resize across
+          // the breakpoint cannot leave a stale value behind — the drawer's own
+          // `open` state is meaningless above md and vice versa.
+          "max-md:w-rail-expanded max-md:[--rail-label-opacity:1]",
+          "max-md:transition-transform",
+          drawerOpen ? "max-md:translate-x-0 max-md:shadow-pop" : "max-md:-translate-x-full",
           // Same 160px as the grid track on `.e911-app`, so the same token — see
           // there for why the two cannot differ. RailLabel's fade deliberately
           // stays on duration-base: an opacity change is neither size nor
@@ -492,7 +667,23 @@ export function AppShell({
           the browser scrolls to the anchor and leaves focus on the link, so the
           next Tab drops the operator straight back into the rail — the failure
           that makes people believe skip links do nothing. */}
-      <main id={mainId} tabIndex={-1} className="min-w-0 outline-none">
+      {/* `inert` while the drawer is open, and this is what makes the drawer
+          modal without hand-rolling a focus trap. SKILL.md rule 10 is blunt
+          about the cost of claiming modality you cannot keep: `aria-modal` with
+          a trap that fails from outside is a promise to assistive technology
+          that is worse than no promise. `inert` is the platform primitive for
+          exactly this — it removes the subtree from the tab order AND from the
+          accessibility tree in one attribute, so there is no branch to get
+          wrong, no keydown handler that misses focus on <body>, and nothing to
+          re-verify when a future control disables itself under a finger.
+          Undefined rather than false: React renders `inert=""` for any truthy
+          value and older runtimes stringify `false` into a live attribute. */}
+      <main
+        id={mainId}
+        tabIndex={-1}
+        inert={drawerOpen || undefined}
+        className="min-w-0 outline-none"
+      >
         {children}
       </main>
     </div>
