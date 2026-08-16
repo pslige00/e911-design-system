@@ -22,6 +22,119 @@ function focusableWithin(root: HTMLElement | null): HTMLElement[] {
   );
 }
 
+/* --------------------------------------------------------- the focus trap */
+/**
+ * Which panels are currently trapping, innermost last. Module-level for the
+ * same reason as the scroll-lock count below: a DangerDialog can be stacked on
+ * a Dialog, and without this the OUTER panel's listener would drag focus out of
+ * the inner one on every single focusin. Only the top of the stack traps.
+ */
+const trapStack: HTMLElement[] = [];
+
+/**
+ * Keeps focus inside an open modal — including when it is already outside.
+ *
+ * That distinction is the whole bug this hook exists for. Until 1.6.0 the trap
+ * was one `onKeyDown` on the dialog's own wrapper, which contains two
+ * assumptions that a real screen breaks:
+ *
+ *   1. that focus is inside the panel when Tab is pressed. The forward branch
+ *      only wrapped `last → first` and had no `!panel.contains(active)` arm at
+ *      all, so focus that was already outside was pulled back on Shift+Tab and
+ *      not on Tab;
+ *   2. worse, that the handler runs. A keydown handler on the wrapper only sees
+ *      keys pressed while focus is INSIDE it. With focus on `<body>` nothing
+ *      reaches it, no branch can fire, and the trap is simply absent — three
+ *      Tabs walked into the page behind an `aria-modal="true"` dialog, whose
+ *      controls a screen reader will not describe because the dialog told it
+ *      not to. A trap that only works while it is not needed.
+ *
+ * How focus gets to `<body>` in practice, and why this is not a corner case: a
+ * footer button with `disabled={pending}` disables itself under the operator's
+ * finger. A disabled element cannot hold focus, the browser drops it to
+ * `<body>`, and no `focusin` follows — so the recapture cannot be `focusin`
+ * alone. `focusout` with no `relatedTarget` is that event, and the timeout is
+ * because `document.activeElement` is not updated until the focus change
+ * finishes.
+ *
+ * Both listeners are on the document in the capture phase, because the events
+ * we care about happen on nodes that are not ours.
+ */
+function useFocusTrap(
+  open: boolean,
+  panelRef: React.RefObject<HTMLElement | null>
+): void {
+  React.useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    trapStack.push(panel);
+    let lastInside: HTMLElement | null = null;
+    let settle = 0;
+
+    const isTop = () => trapStack[trapStack.length - 1] === panel;
+
+    /** Put focus back where it was, or at the top of the panel. */
+    const pull = () => {
+      // isConnected: on close the panel is detached before this effect's
+      // cleanup runs, and focusing a detached node is at best a no-op and at
+      // worst takes focus off the trigger we are about to restore it to.
+      if (!panel.isConnected || !isTop()) return;
+      // `matches(FOCUSABLE)` is not belt-and-braces, it is the whole case this
+      // recovery exists for: the element focus fell OFF is usually the one that
+      // just disabled itself, and it is still connected, still in the panel and
+      // still painted. Calling focus() on it is a silent no-op, and focus stays
+      // on <body> — which is where the first version of this fix left it.
+      const previous =
+        lastInside &&
+        lastInside.isConnected &&
+        panel.contains(lastInside) &&
+        lastInside.matches(FOCUSABLE) &&
+        lastInside.getClientRects().length > 0
+          ? lastInside
+          : null;
+      (previous ?? focusableWithin(panel)[0] ?? panel).focus();
+      // Nothing above is guaranteed to take: a node can be focusable by
+      // selector and refuse focus (inert ancestor, a node React is mid-swap
+      // on). The panel itself always accepts it — it carries tabIndex={-1}.
+      if (!panel.contains(document.activeElement)) panel.focus();
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (panel.contains(target)) {
+        lastInside = target;
+        return;
+      }
+      pull();
+    };
+
+    const onFocusOut = (e: FocusEvent) => {
+      // Only care about focus LEAVING the panel for nowhere.
+      if (!panel.contains(e.target as Node)) return;
+      if (e.relatedTarget instanceof Node && panel.contains(e.relatedTarget)) return;
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => {
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && panel.contains(active)) return;
+        pull();
+      }, 0);
+    };
+
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("focusout", onFocusOut, true);
+    return () => {
+      window.clearTimeout(settle);
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("focusout", onFocusOut, true);
+      const at = trapStack.lastIndexOf(panel);
+      if (at >= 0) trapStack.splice(at, 1);
+    };
+  }, [open, panelRef]);
+}
+
 /* ------------------------------------------------------- body scroll lock */
 /* Module-level because a DangerDialog can be stacked on a Dialog; the count is
    what stops the inner one's unmount from unlocking the page under the outer. */
@@ -108,6 +221,13 @@ export function Dialog({
   const titleId = `${reactId}-title`;
   const descId = `${reactId}-desc`;
 
+  // DECLARED FIRST, and that ordering is load-bearing: React runs cleanups in
+  // the order the effects were declared, so this one removes its listeners
+  // before the effect below hands focus back to the trigger. The other way
+  // round, the trap would see the trigger's focusin as "outside the panel" and
+  // fight the restore it is supposed to allow.
+  useFocusTrap(open, panelRef);
+
   // Capture the trigger before the panel mounts and steals focus, and give it
   // back on close — otherwise the operator's place in the page is gone.
   React.useEffect(() => {
@@ -154,11 +274,18 @@ export function Dialog({
       e.preventDefault(); // nothing to move to; keep focus on the panel
       return;
     }
+    // The two branches are deliberately symmetrical now. They were not: the
+    // backward one tested `!panel.contains(active)` and the forward one did
+    // not, so focus already outside the panel was recovered on Shift+Tab and
+    // walked further away on Tab. useFocusTrap above would catch that a moment
+    // later, but a wrap handled here never lets focus leave in the first place,
+    // which is one less announced element for a screen reader.
     const active = document.activeElement;
-    if (e.shiftKey && (active === first || !panel.contains(active))) {
+    const outside = !panel.contains(active);
+    if (e.shiftKey && (active === first || outside)) {
       e.preventDefault();
       last.focus();
-    } else if (!e.shiftKey && active === last) {
+    } else if (!e.shiftKey && (active === last || outside)) {
       e.preventDefault();
       first.focus();
     }
