@@ -1,6 +1,6 @@
 {
   "name": "@e911/design-system",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "E911 design system — Terrazzo × Solstice / Grotesk Standard. Tokens + components + Claude Code skill for any E911 app, in any repo.",
   "type": "module",
   "exports": {

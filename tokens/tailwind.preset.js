@@ -82,6 +82,8 @@ export default {
         "ribbon-meta": ["12.5px", { lineHeight: "1.35" }],
       },
       borderRadius: {
+        xs: "var(--e911-radius-xs)",     /* 5px  — Checkbox box ONLY; see
+                                            tokens.css for why it is not 8px */
         sm: "var(--e911-radius-sm)",     /* 8px  — chips, inputs   */
         DEFAULT: "var(--e911-radius-md)",/* 10px — cards           */
         md: "var(--e911-radius-md)",     /* 10px — same, spelled out; without
@@ -99,6 +101,10 @@ export default {
         ctl: "var(--control-height)",
         "ctl-sm": "var(--control-height-sm)",
         tap: "var(--tap-target)", /* min-h-tap / size-tap — the touch floor */
+        check: "var(--check-size)",         /* size-check — the Checkbox/Radio
+                                               BOX. Its tap target is the label
+                                               row, which is min-h-tap. */
+        "check-tap": "var(--check-size-tap)",
       },
       zIndex: {
         rail: "var(--layer-rail)",

@@ -47,6 +47,7 @@ $e911-space-6: 24px;
 $e911-space-8: 32px;
 $e911-space-10: 40px;
 $e911-space-12: 48px;
+$e911-radius-xs: 5px;   // Checkbox box only — see tokens.css
 $e911-radius-sm: 8px;
 $e911-radius-md: 10px;
 $e911-radius-lg: 14px;
@@ -57,6 +58,8 @@ $e911-motion-duration: 170ms;
 $e911-metric-controlHeight: 32px;
 $e911-metric-controlHeightSm: 28px;
 $e911-metric-tapTarget: 44px;
+$e911-metric-checkSize: 18px;     // painted Checkbox/Radio box; the tap
+$e911-metric-checkSizeTap: 24px;  // target is the label row, not the box
 $e911-metric-rowHeight: 40px;
 $e911-metric-cardEdgeWidth: 4px;
 $e911-metric-railWidth: 64px;

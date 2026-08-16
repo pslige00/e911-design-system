@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>E911 Design System — spec v1.5.0</title>
+<title>E911 Design System — spec v1.6.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -120,6 +120,37 @@ h1,h2,h3{margin:0} p{margin:0}
 .hint.err{color:var(--status-bad); font-weight:500}
 .input.err{border-color:var(--status-bad)}
 
+/* Boolean controls (1.6.0). The REAL component is src/choice.tsx; this is the
+   same token arithmetic in plain CSS, so a token move shows up here too.
+   The row — not the box — is the tap target: --tap-target tall at both sizes,
+   with the box at --check-size / --check-size-tap inside it. */
+.choice{display:inline-flex; align-items:flex-start; gap:10px; min-height:var(--tap-target); padding:12px 0; font-size:13px; color:var(--text-primary); cursor:pointer}
+.choice.tap{gap:12px; padding:10px 0}
+.choice.off{opacity:.45; cursor:not-allowed}
+.plate{position:relative; display:flex; align-items:center; min-height:1.5em; flex:0 0 auto}
+/* appearance:none, so the box is OURS: size, radius, stroke and fill are the
+   system's rather than the browser's. --border-control is the tier held to
+   1.4.11's 3:1 — the box is --surface-card on a card that is also
+   --surface-card, so the stroke is the only thing identifying it. */
+.choice input{appearance:none; -webkit-appearance:none; margin:0; flex:0 0 auto;
+  width:var(--check-size); height:var(--check-size);
+  border:1.5px solid var(--border-control); border-radius:var(--e911-radius-xs);
+  background:var(--surface-card)}
+.choice.tap input{width:var(--check-size-tap); height:var(--check-size-tap)}
+.choice input[type=radio]{border-radius:var(--e911-radius-pill)}
+.choice input:checked, .choice input:indeterminate{background:var(--action-primary); border-color:var(--action-primary)}
+.choice input.err{border-color:var(--status-bad)}
+.choice svg{position:absolute; left:0; top:50%; transform:translateY(-50%);
+  width:var(--check-size); height:var(--check-size); color:var(--text-on-action);
+  pointer-events:none; opacity:0}
+.choice.tap svg{width:var(--check-size-tap); height:var(--check-size-tap)}
+.choice input:checked ~ .tick{opacity:1}
+/* After the :checked rule on purpose — a box that is both must show the dash,
+   because "mixed" is what it is announced as. */
+.choice input:indeterminate ~ .tick{opacity:0}
+.choice input:indeterminate ~ .dash{opacity:1}
+@media (forced-colors: active){ .choice input{appearance:auto} .choice svg{display:none} }
+
 table{width:100%; border-collapse:collapse}
 th{text-align:left; padding:8px var(--e911-space-4); font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-tertiary); border-bottom:1px solid var(--border-default); background:var(--surface-sunken); white-space:nowrap}
 td{padding:0 var(--e911-space-4); height:var(--row-height); border-bottom:1px solid var(--border-row); font-size:var(--font-size-table); vertical-align:middle}
@@ -136,7 +167,7 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
 <div class="top">
   <div class="top-in">
     <div class="seal">911</div>
-    <div><b>E911 Design System</b><small>v1.5.0 · Terrazzo × Solstice · Grotesk Standard</small></div>
+    <div><b>E911 Design System</b><small>v1.6.0 · Terrazzo × Solstice · Grotesk Standard</small></div>
     <div class="mode" role="group" aria-label="Theme">
       <button type="button" data-m="light" aria-pressed="true">Light</button>
       <button type="button" data-m="dark" aria-pressed="false">Dark</button>
@@ -249,6 +280,82 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <section class="sec">
+    <h2>Boolean controls <span>Checkbox · Radio — box is --check-size, target is --tap-target</span></h2>
+    <div class="grid g2">
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:6px">Checkbox — every state, size="md"</span>
+        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 var(--e911-space-4)">
+          <label class="choice"><span class="plate"><input type="checkbox">
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+            <svg class="dash" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.3 8h7.4"/></svg>
+          </span>Unchecked</label>
+          <label class="choice"><span class="plate"><input type="checkbox" checked>
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+            <svg class="dash" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.3 8h7.4"/></svg>
+          </span>Checked</label>
+          <label class="choice"><span class="plate"><input type="checkbox" class="mixed">
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+            <svg class="dash" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.3 8h7.4"/></svg>
+          </span>Indeterminate</label>
+          <label class="choice off"><span class="plate"><input type="checkbox" checked disabled>
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+          </span>Disabled</label>
+          <label class="choice"><span class="plate"><input type="checkbox" class="err" aria-invalid="true">
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+          </span>Invalid</label>
+          <label class="choice"><span class="plate"><input type="checkbox">
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+          </span>Tab to me — the ring is the system's</label>
+        </div>
+        <div style="display:flex; gap:var(--e911-space-5); margin-top:var(--e911-space-2)">
+          <label class="choice tap"><span class="plate"><input type="checkbox" checked>
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+          </span>size="tap" · 24px box</label>
+          <label class="choice tap"><span class="plate"><input type="checkbox">
+            <svg class="tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.4l2.8 2.8L12 5.5"/></svg>
+          </span>Wall tablet</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="lab" style="display:block; margin-bottom:6px">Radio — the same box, drawn round</span>
+        <div style="display:grid">
+          <label class="choice"><span class="plate"><input type="radio" name="spec-cover" checked>
+            <svg class="tick" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3.4"/></svg>
+          </span>Voluntary substitution</label>
+          <label class="choice"><span class="plate"><input type="radio" name="spec-cover">
+            <svg class="tick" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3.4"/></svg>
+          </span>Directed cover</label>
+          <label class="choice off"><span class="plate"><input type="radio" name="spec-cover" disabled>
+            <svg class="tick" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3.4"/></svg>
+          </span>Callback — unavailable</label>
+        </div>
+        <p style="font-size:12.5px; color:var(--text-secondary); margin-top:var(--e911-space-2); max-width:60ch">
+          The label is INSIDE the control, so the whole row toggles it and the row is
+          <span class="mono">--tap-target</span> tall at both sizes. The box is
+          <span class="mono">--check-size</span> (18px) / <span class="mono">--check-size-tap</span>
+          (24px) — a hit area larger than the painted box is the point, not an oversight.
+          A wrapping label like this is also the accessible name, which is why these do
+          not go inside <span class="mono">FormField</span>: that renders a label ABOVE a
+          control, and a checkbox's label sits after the box and has to be part of the target.
+        </p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:var(--e911-space-4)">
+      <p style="font-size:12.5px; color:var(--text-secondary); max-width:80ch">
+        Unchecked, the box is <span class="mono">--surface-card</span> with a
+        <span class="mono">--border-control</span> stroke — 3.38:1 light / 3.27:1 dark on a
+        card, the same 1.4.11 floor an input's boundary is held to, because a checkbox is
+        the one control whose entire meaning is non-text. Checked, it is an
+        <span class="mono">--action-primary</span> fill (4.62:1 / 5.01:1 against the card)
+        carrying a <span class="mono">--text-on-action</span> mark (4.62:1 / 5.41:1 against
+        the fill). Every one of those figures is in
+        <span class="mono">npm run audit:contrast</span>.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
     <h2>Focus <span>two tones, one rule, every surface</span></h2>
     <div class="card">
       <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:12px">
@@ -348,11 +455,14 @@ footer{margin-top:var(--e911-space-10); padding-top:var(--e911-space-4); border-
   </section>
 
   <footer>
-    E911 Design System v1.5.0 · Locked 2026-08-14 · WCAG 2.1 AA enforced by npm run audit:contrast · Status is always pill + dot + word · Sample data only
+    E911 Design System v1.6.0 · Locked 2026-08-14 · WCAG 2.1 AA enforced by npm run audit:contrast · Status is always pill + dot + word · Sample data only
   </footer>
 </div>
 
 <script>
+/* :indeterminate is settable only in script — the same reason Checkbox takes it
+   as a prop and applies it through a DOM property. */
+document.querySelectorAll('input.mixed').forEach(i => { i.indeterminate = true; });
 document.querySelectorAll('.mode button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.mode button').forEach(x => x.setAttribute('aria-pressed','false'));
   b.setAttribute('aria-pressed','true');

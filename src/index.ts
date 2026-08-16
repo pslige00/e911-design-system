@@ -25,6 +25,10 @@ export type {
   RowLinkRenderer,
   FormFieldProps,
 } from "./data";
+// The boolean controls. Self-labelling — the label is a CHILD and part of the
+// hit area, which is why they are not FormField children. See SKILL.md.
+export { Checkbox, Radio } from "./choice";
+export type { CheckboxProps, RadioProps } from "./choice";
 export { Dialog, DangerDialog } from "./dialog";
 export type { DialogProps, DangerDialogProps } from "./dialog";
 export { Select } from "./select";

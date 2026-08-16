@@ -5,9 +5,29 @@ app lives in its own repo and depends on this one. See `SETUP.md` for how
 to consume it.
 
 **Direction:** Terrazzo × Solstice · **Type:** Grotesk Standard
-(Space Grotesk / Onest / JetBrains Mono) · **v1.5.0** · Locked 2026-08-14.
+(Space Grotesk / Onest / JetBrains Mono) · **v1.6.0** · Locked 2026-08-14.
 
-**New in 1.5.0**, all additive — nothing renamed, removed, or restyled:
+**New in 1.6.0**, all additive — nothing renamed, removed, or restyled:
+
+- **`Checkbox` and `Radio`** — the two boolean controls the system did not have,
+  which is why a consumer shipped a native input with
+  `accent-[var(--action-primary)]`. Both are a real `<input>` with
+  `appearance: none`, so `:checked`, form submission and the accessible role
+  stay the browser's while the box is the system's. The label is a CHILD and
+  part of the 44px hit area; the painted box is `--check-size` (18px) /
+  `--check-size-tap` (24px); `indeterminate` is supported and announced as
+  *mixed*, never as checked. Three new tokens carry it — `--check-size`,
+  `--check-size-tap`, `--e911-radius-xs` — and the contrast audit gained 18
+  pairs, all passing, with no new waivers.
+- **`Dialog` now traps focus that is already outside it.** The trap was a
+  keydown handler bound to the dialog's own wrapper, so focus on `<body>` —
+  where a footer button carrying `disabled={pending}` drops it — never reached
+  it, and three Tabs walked into the page behind an `aria-modal="true"` dialog.
+  See rule 10 in `tokens/SKILL.md`.
+- **The light/dark card-border asymmetry is written down** (SKILL.md rule 6),
+  with the luminance-step measurements behind it, so sweeps stop re-asking.
+
+**In 1.5.0:**
 a `DataTable` row link can say what it is FOR (`rowLinkPurpose`) and can be
 scoped to the row's subject rather than swallowing the whole first cell
 (`ctx.rowLink`, the second argument to a `cell`); `DateField` no longer discards
@@ -25,7 +45,7 @@ control's boundary measures 3.38:1 light / 3.27:1 dark, up from 1.31:1 / 1.89:1.
 | `tokens/tokens.scss` | Primitives as SCSS vars — build-time math only. |
 | `tokens/spec.html` | Living spec. `<link>`s the real `tokens.css` rather than inlining a copy — keep it that way, or it becomes a second source of truth. Open directly in a browser; no build step. |
 | `tokens/SKILL.md` | Claude Code skill — copy into every consuming app repo. |
-| `src/` | React component library. Shell + data: `AppShell`, `RailAction`, `SkipLink`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`. Interaction primitives: `Dialog`/`DangerDialog`, `Select`, `Tabs`/`TabPanel`, `ToastProvider`/`useToast`, `DateField`, `Pagination`, `Tooltip`. |
+| `src/` | React component library. Shell + data: `AppShell`, `RailAction`, `SkipLink`, `Ribbon`, `DomainCard`, `KpiCard`, `DataTable`, `StatusTag`, `CertChip`, `Chip`, `Button`, `FormField`. Boolean controls: `Checkbox`, `Radio`. Interaction primitives: `Dialog`/`DangerDialog`, `Select`, `Tabs`/`TabPanel`, `ToastProvider`/`useToast`, `DateField`, `Pagination`, `Tooltip`. |
 | `src/contract.ts` | The DATA half — `DOMAIN_EDGE`, `cn`, `RAIL_PINNED_STORAGE_KEY`. No `"use client"`, so a React Server Component can read the real values. |
 | `SETUP.md` | **Start here** — how a separate app repo installs and wires this up. |
 

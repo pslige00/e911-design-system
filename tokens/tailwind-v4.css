@@ -135,6 +135,11 @@
      no build error. The v3 preset never had this problem because it defined a
      DEFAULT key. Setting it keeps the two ports honest. */
   --radius:      var(--e911-radius-md);
+  /* `rounded-xs` — the Checkbox box, and nothing else. v4 ships an `xs` radius
+     of its own (0.125rem), so leaving this unset would not error, it would
+     silently draw a 2px corner. See tokens.css for why the box does not use
+     `rounded-sm`. */
+  --radius-xs:   var(--e911-radius-xs);
   --radius-sm:   var(--e911-radius-sm);
   --radius-md:   var(--e911-radius-md);
   --radius-lg:   var(--e911-radius-lg);
@@ -147,6 +152,10 @@
   --spacing-ctl:    var(--control-height);
   --spacing-ctl-sm: var(--control-height-sm);
   --spacing-tap:    var(--tap-target);
+  /* size-check / size-check-tap — the painted box of a Checkbox or Radio. NOT
+     its tap target: that is the label row, which is --spacing-tap tall. */
+  --spacing-check:     var(--check-size);
+  --spacing-check-tap: var(--check-size-tap);
 
   /* motion. One curve for the whole system. */
   --ease-e911: var(--e911-ease);

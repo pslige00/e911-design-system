@@ -340,6 +340,25 @@ const PAIRS = [
   { role: "CertChip bad", where: "CertChip", fg: "--status-bad", bg: ["--status-bad-soft"], px: 10, weight: 400 },
   { role: "Field error text", where: "FormField error", fg: "--status-bad", bg: ["--surface-card"], px: 11.5, weight: 500 },
 
+  // ---- boolean controls (1.6.0) -----------------------------------------
+  // A Checkbox or Radio is the one control in this system whose whole meaning
+  // is carried by non-text: an unchecked box is a stroke, a checked one is a
+  // fill plus a mark. All four rows are 1.4.11 (3:1), and all four are scored
+  // on every surface the control is actually painted on — card (inside a
+  // DomainCard), canvas (a bare form on the page), sunken (a select-all in a
+  // table head). --surface-tint is NOT in the list and the omission is
+  // deliberate rather than convenient: it is a hover/quiet fill, no component
+  // paints a control on it, and --border-control measures 2.90:1 light /
+  // 2.96:1 dark there. If a component ever does put a box on tint, this is the
+  // list to add it to, and it will fail — which is the point.
+  { role: "Checkbox box (unchecked)", where: "Checkbox / Radio", fg: "--border-control", bg: ["--surface-card", "--surface-canvas", "--surface-sunken"], kind: "ui" },
+  { role: "Checkbox fill (checked)", where: "Checkbox / Radio :checked", fg: "--action-primary", bg: ["--surface-card", "--surface-canvas", "--surface-sunken"], kind: "ui" },
+  // The tick, the indeterminate dash and the radio's dot are one pair: the mark
+  // on the fill it is drawn on. Same tokens as the primary button's label, and
+  // measured separately because a 2.4px stroke is not a 13.5px word.
+  { role: "Checkbox mark", where: "Checkbox tick / dash / Radio dot", fg: "--text-on-action", bg: ["--action-primary"], kind: "ui" },
+  { role: "Checkbox box (invalid)", where: "Checkbox invalid", fg: "--status-bad", bg: ["--surface-card", "--surface-canvas"], kind: "ui" },
+
   // ---- borders (1.4.11: only boundaries that IDENTIFY a control) ---------
   // The one border tier that IDENTIFIES rather than separates, and therefore
   // the one 1.4.11 actually asks 3:1 of. Its own token since 1.5.0.

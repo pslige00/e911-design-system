@@ -40,6 +40,33 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
    system's last 1.4.11 waiver in 1.5.0, taking an input's stroke from 1.31:1 to
    3.38:1 in light and 1.89:1 to 3.27:1 in dark. `npm run audit:contrast` checks
    every pair in both themes; run it after touching a colour.
+
+   **Why the card border is 1.21:1 in light and was lifted to 2.04:1 in dark.**
+   Every sweep re-raises this, so here is the measurement that settles it. The
+   stated reason for lifting dark in 1.4.0 was that `--surface-card` is only
+   ~1.09:1 against `--surface-canvas` there, so the BORDER is what says "card",
+   not the surface — and the objection is that light measures 1.08:1, which
+   looks like the same situation. It is not, and the contrast RATIO is what
+   hides that. Painted pixels, Chrome, measured for 1.6.0:
+
+   | | ratio | luminance step |
+   |---|---|---|
+   | light card ↔ canvas | 1.08:1 | **0.0766** |
+   | dark card ↔ canvas | 1.08:1 | **0.0043** |
+   | light card border ↔ canvas | 1.21:1 | **0.1712** |
+   | dark card border ↔ canvas | 2.04:1 | **0.0578** |
+
+   Identical ratios, an 18× difference in the actual luminance step — because
+   the ratio's `+0.05` flare term dominates at the dark end, where every value
+   in the theme sits below L=0.06. In light the card genuinely IS identified by
+   its own surface and the border is trim; in dark the surface difference is
+   nothing and the border was carrying the whole job at a third of the physical
+   edge strength. Lifting dark restored the light-mode edge; lifting light as
+   well would darken trim that is already the strongest edge on the page. **The
+   asymmetry is deliberate. Both stay waived** in `scripts/contrast-audit.mjs`
+   as separation rather than identification. Across themes, compare the
+   luminance step, not the ratio — and neither figure is a reason to touch
+   `--border-control`, which is a different tier doing a regulated job.
 7. **Never draw your own focus ring.** One rule in `tokens.css` gives every
    focusable thing in every app a TWO-TONE indicator — `--focus-ring` with
    `--focus-ring-halo` either side of it — because no single colour clears 3:1
@@ -66,7 +93,31 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
    either way, and marks itself `aria-invalid` until the operator edits it. The
    app's validation gets to speak, in the app's words, via `FormField`'s
    `error`. If you build a control that can refuse input, refuse it out loud.
-10. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component
+10. **A modal owns focus, including when focus is already outside it.** A rule
+   since 1.6.0, because `Dialog` broke it and `aria-modal="true"` made the break
+   worse than useless. The trap was one `onKeyDown` on the dialog's own wrapper,
+   which assumes focus is inside the panel when Tab is pressed. Two ways that
+   fails, both found in a consumer:
+   - the forward branch wrapped `last → first` but had no
+     `!panel.contains(active)` arm, so focus already outside came back on
+     Shift+Tab and walked further away on Tab;
+   - a keydown handler only fires for keys pressed inside it. Focus on `<body>`
+     reaches nothing, so the trap is simply ABSENT — three Tabs walked into the
+     page behind the dialog, whose controls a screen reader will not describe
+     because `aria-modal` told it that region does not exist.
+
+   Focus reaches `<body>` on ordinary screens, not exotic ones: **a footer
+   button carrying `disabled={pending}` disables itself under the operator's
+   finger, and a disabled element cannot hold focus.** No `focusin` follows, so
+   a recapture keyed only on `focusin` does not fire either — `focusout` with a
+   null `relatedTarget` is the event that exists, and `document.activeElement`
+   is not updated until the change finishes. `Dialog` now recaptures from a
+   document-level listener, only for the TOP panel in a stack, and never onto an
+   element that has just become unfocusable. If you build another layer that
+   claims modality, it owns focus by the same rules; `aria-modal` without a trap
+   that works from outside is a promise to assistive technology you are not
+   keeping.
+11. **Import `DOMAIN_EDGE` and `cn` from the package root, never from a component
    module.** Every component is `"use client"`; a value re-exported through a
    client module reaches a React Server Component as a client-reference proxy,
    so `DOMAIN_EDGE.operations` is not `"orange"`. `DomainCard` then matches no
@@ -173,6 +224,39 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   <Button size="tap">Record</Button>
   ```
 
+  **Boolean controls: `Checkbox` and `Radio`** (1.6.0). Both are a real
+  `<input>` with `appearance: none`, so they stay a checkbox to a form, to
+  `:checked`, and to a screen reader while the system paints the box. Three
+  things about them are different from every other control here, and all three
+  are deliberate:
+
+  - **The label is a CHILD, not a prop, and it is part of the control.**
+    `<Checkbox>…</Checkbox>` wraps the box and the text in one `<label>`: the
+    text is the accessible name, clicking anywhere in the row toggles the box,
+    and rich content (a mono span, an interpolated name) works because it is
+    just children. **Do not put one inside `FormField`.** That renders a label
+    ABOVE a control with a value; a checkbox's label sits after the box and has
+    to be inside the hit area, so the two are different patterns rather than
+    competing ones. For a SET with one shared label and one error, write the
+    `<fieldset><legend>` (or `role="radiogroup"` + `aria-label`) yourself and
+    point `aria-describedby` at your own message — the grouping element is where
+    an app's layout and error copy live.
+  - **The hit area is bigger than the painted box, on purpose.** The label row
+    is `--tap-target` (44px) at BOTH sizes; `size` moves the box only —
+    `--check-size` (18px) or `--check-size-tap` (24px). A 44px checkbox is a
+    tile, and a finger presses the row.
+  - **`indeterminate` is a prop and is announced as "mixed", never as checked.**
+    It is a DOM property with no HTML attribute, which is why the component sets
+    it rather than letting you spell it in JSX, and why `checked` still governs
+    what submits.
+
+  `Radio` requires `name` — that is what makes a set one control with one tab
+  stop and arrow-key selection. A hand-rolled `<input type="checkbox">` with
+  `accent-color` is a review block: it passes a token check while leaving size,
+  radius, disabled treatment and the focus ring to the browser, so it is a
+  different control in Chrome and in Firefox and gets the UA ring instead of the
+  system's two-tone one.
+
   Two things NOT to do instead, both tried first by consumers: raising
   `--control-height` (it resizes every control in every E911 app to serve one
   screen), and `className="h-tap"` (it works on a bare `<input>` and silently
@@ -252,7 +336,11 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
   all — a local one that "just adds labels" is a second nav that will not learn
   about the pin, the tap targets, or the overlay rule
 - More than one ribbon per page; shadows deeper than `--shadow-pop`; radii other
-  than the three tokens; new fonts of any kind
+  than the four tokens — `--e911-radius-sm` / `-md` / `-lg` plus the pill, and
+  `--e911-radius-xs` (5px, added 1.6.0), which belongs to the `Checkbox` box and
+  nothing else: 8px on an 18px square reads as a circle and collides with
+  `Radio`. Reaching for `xs` on a chip, an input or a card is the block; new
+  fonts of any kind
 - Status conveyed by color only; non-tabular digits in any numeric column
 - A form control drawn on `--border-default` (that tier separates; controls are
   identified by `--border-control`, which is the one held to 3:1)
@@ -261,6 +349,12 @@ Locked 2026-08-14 after five exploration rounds. Do not restyle; consume.
 - `title="…"` used as a tooltip (rule 5), or an interactive target under
   `--tap-target` anywhere a finger can reach it
 - A local focus ring of any kind (rule 7), or `outline-color` in a transition
+- A hand-rolled checkbox or radio — a bare `<input type="checkbox">`, with or
+  without `accent-color`, or a `<span>` drawn to look like one. Use `Checkbox` /
+  `Radio`; a checkbox inside `FormField`, or one whose row is under
+  `--tap-target`, is the same block
+- A modal layer that traps focus only from a handler bound inside itself
+  (rule 10) — it stops working in the one state that matters
 - A clickable table row with no `rowHref`, or a card whose heading level was
   chosen by the component rather than by the page
 

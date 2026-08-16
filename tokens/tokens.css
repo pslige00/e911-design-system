@@ -10,6 +10,9 @@
    waiver — a form control's boundary now clears 3:1 in both themes. Measured in
    Chrome on the compiled components: 1.31:1 -> 3.38:1 light, 1.89:1 -> 3.27:1
    dark. No other border moved, and no other value in this file changed.
+   1.6.0 (2026-08-16): --check-size / --check-size-tap and --e911-radius-xs, the
+   three metrics Checkbox and Radio need. Additive only — no existing value in
+   this file moved, so every screen built against 1.5.0 renders identically.
 
    THE RULE: application code uses TIER 2 (semantic) names only.
    Tier 1 primitives exist so Tier 2 has something to point at.
@@ -92,6 +95,14 @@
   --e911-space-8: 32px; --e911-space-10: 40px; --e911-space-12: 48px;
 
   /* radii */
+  /* Added in 1.6.0 for ONE job: the box of a boolean control (Checkbox, Radio).
+     The system's smallest radius is 8px, which is a chip's corner on a 28px
+     pill and reads correctly there. On an 18px square it is 44% of the side —
+     the box comes out a squircle, and a squircle beside a Radio's circle is two
+     controls a dispatcher has to look twice at. 5px keeps the same corner
+     LANGUAGE at a quarter of the area. Scoped by name and by comment to that
+     box; a chip, an input or a card that reaches for it is a review block. */
+  --e911-radius-xs: 5px;    /* Checkbox box only            */
   --e911-radius-sm: 8px;    /* chips, inputs, rail buttons  */
   --e911-radius-md: 10px;   /* cards                        */
   --e911-radius-lg: 14px;   /* ribbon, dialogs              */
@@ -271,6 +282,22 @@
                                       so anything finger-reachable is ≥ this, even
                                       when its painted box is --control-height */
   --row-height: 40px;
+
+  /* The PAINTED box of a boolean control — Checkbox, Radio (1.6.0). It is a
+     separate metric from --control-height on purpose, and the reason is the one
+     thing that makes a checkbox different from every other control in the
+     family: its hit area and its visual box are not the same rectangle.
+
+     A Button at size="tap" IS 44px, because a finger presses the button. A
+     checkbox at 44px square is a tile, not a checkbox — so the 44px belongs to
+     the LABEL ROW (which is what a finger presses, and which the label is part
+     of), and the box stays small enough to read as a checkbox: 18px at the
+     system's density, 24px when the whole form has been raised to `tap` and an
+     18px mark would be the one thing on the screen a finger cannot see it hit.
+     Both sizes sit inside a --tap-target row, so neither is ever the target. */
+  --check-size: 18px;
+  --check-size-tap: 24px;
+
   --card-padding: var(--e911-space-4);
   --card-edge-width: 4px;          /* the colored top edge */
   --rail-width: 64px;              /* collapsed: one 44px tap target + gutters */
