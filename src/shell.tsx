@@ -346,7 +346,43 @@ export function AppShell({
           if (!e.currentTarget.contains(e.relatedTarget)) setFocusOpen(false);
         }}
         className={cn(
-          "relative z-rail flex flex-col gap-1.5 overflow-hidden",
+          // STICKY, AND BOUNDED TO THE VIEWPORT (1.8.2). Reported from the
+          // field: Admin and the theme toggle "can't be reached without
+          // scrolling to the bottom of the page".
+          //
+          // The rail was never pinned to anything. It is a grid item beside
+          // <main>, and a grid item's default `align-self: stretch` sizes it to
+          // the ROW, which is as tall as the tallest cell — <main>. Measured on
+          // /now at 1280x640 before this change: main.scrollHeight 5156px, and
+          // nav's own rect 5156.47px. The rail was not overflowing; it was
+          // being told to be five thousand pixels tall, and `mt-auto` dutifully
+          // put the footer at the bottom of THAT box. The sign-out button sat
+          // 4516px below the fold. On this app's page inventory — schedule
+          // grids, approval queues, reports — that is nearly every screen, so
+          // the rail was not functioning as a rail on any of them.
+          //
+          // `h-dvh` not `h-screen`: dvh tracks the dynamic viewport, so a mobile
+          // browser retracting its chrome does not leave the footer under it.
+          // The explicit height also overrides `align-self: stretch`, which is
+          // what actually severs the tie to <main>'s height.
+          //
+          // CONSUMER REQUIREMENT: sticky resolves against the nearest scrolling
+          // ancestor, so an app that wraps <AppShell> in anything carrying
+          // `overflow: hidden|auto|scroll` silently gets the old behaviour back
+          // — the rail sticks to a box that never scrolls, which looks exactly
+          // like this bug. If the rail stops following the page, look there
+          // first.
+          //
+          // Stacking is unchanged: `relative` + z-index and `sticky` + z-index
+          // both create a stacking context, so the hover overlay still paints
+          // over <main> at z-rail with `shadow-pop`. Sticky does not clip, and
+          // the grid container sets no overflow, so the rail still overhangs
+          // its own 64px track when it expands unpinned.
+          "sticky top-0 z-rail h-dvh self-start",
+          "flex flex-col gap-1.5",
+          // The NAV itself does not scroll — the destinations region below
+          // does. See there for why the split matters.
+          "overflow-hidden",
           "border-r border-line bg-card px-2.5 py-3.5 max-md:hidden",
           // Same 160px as the grid track on `.e911-app`, so the same token — see
           // there for why the two cannot differ. RailLabel's fade deliberately
@@ -404,10 +440,49 @@ export function AppShell({
         />
         <div aria-hidden className="h-px w-full shrink-0 bg-line" />
 
-        {items.map(renderRow)}
+        {/* THE DESTINATIONS SCROLL; THE FOOTER DOES NOT (1.8.2).
+
+            Bounding the nav to the viewport fixed the rail being as tall as the
+            page, but it did not fix what was actually reported — Admin and the
+            theme toggle unreachable without scrolling. Measured after that fix
+            alone, at 1280x640 with a role carrying every destination: the nav
+            was correctly 640px, and the footer's bottom edge sat at 664px. Still
+            below the fold, just by 24px instead of 4516.
+
+            A rail whose items exceed the viewport has to give somewhere, and the
+            row height is not negotiable — 44px is --tap-target and this runs on
+            wall tablets. So the DESTINATIONS take the overflow and the footer
+            keeps its place: `flex-1` here claims the leftover height and scrolls
+            inside it, which pins the footer to the bottom of the visible rail no
+            matter how many items precede it. Admin and the theme toggle are then
+            reachable at any viewport height and any item count, which is the
+            actual requirement.
+
+            `min-h-0` is load-bearing and easy to drop: a flex item's default
+            `min-height: auto` refuses to shrink below its content, so without it
+            this box grows to fit every row, the nav overflows again, and the
+            footer goes back under the fold — the exact bug, reintroduced by an
+            omission that looks like a no-op.
+
+            Both overflow axes are named. A single `auto` axis forces the
+            `visible` one to `auto` too, and a horizontally scrolling rail would
+            be a new defect; overflow-x must stay hidden anyway because
+            RailLabel's fade relies on it.
+
+            `scrollbar-width: none`, and this is the one place this system hides
+            an affordance on purpose. The rail's content box is 44px wide at
+            --rail-width; a classic scrollbar takes ~15px of it and would leave
+            every destination a 29px target, breaching --tap-target — a stated
+            floor — to show a control nobody drags in a 64px column. Scrolling
+            still works by wheel, trackpad and touch, keyboard focus scrolls its
+            own row into view, and one hover, Tab or pin takes the rail to 224px
+            where the question does not arise. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-x-hidden overflow-y-auto [scrollbar-width:none]">
+          {items.map(renderRow)}
+        </div>
 
         {footerItems?.length || railFooter ? (
-          <div className="mt-auto flex w-full flex-col gap-1.5 pt-1.5">
+          <div className="flex w-full shrink-0 flex-col gap-1.5 pt-1.5">
             {footerItems?.map(renderRow)}
             {railFooter}
           </div>
