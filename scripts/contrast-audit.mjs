@@ -50,12 +50,41 @@ const TOKENS = resolvePath(here, "../tokens/tokens.css");
 function readBlocks(css) {
   const light = new Map(); // :root and :root, [data-theme="light"]
   const dark = new Map(); // [data-theme="dark"]
+  let atRuleDepth = 0;
 
   const blockRe = /([^{}]+)\{([^{}]*)\}/g;
   let m;
   while ((m = blockRe.exec(css)) !== null) {
     const selector = m[1].replace(/\/\*[\s\S]*?\*\//g, "").trim();
     const body = m[2];
+
+    /* A `:root` nested inside an at-rule is NOT the base theme, and this regex
+       cannot see the difference: it matches innermost brace pairs, so the
+       `:root { --font-size-control: 16px }` inside
+       `@media (pointer: coarse)` arrives here looking exactly like the
+       top-level `:root`, and the map ends up holding the touch value as though
+       it were the desk one.
+
+       Caught the day that media query was added, because the value it
+       overrides is a font size and nothing scores a font size — PAIRS carries
+       its own `px`. A COLOUR added the same way would have been scored wrong
+       and reported PASS, which is this file's whole failure mode arriving
+       through a shape the fix for the last one did not cover.
+
+       At-rule bodies are skipped rather than scoped, deliberately: this script
+       audits the DEFAULT theme pair, and a conditional override is a different
+       surface that would need its own PAIRS entries to mean anything. Skipping
+       is honest; guessing is not. If a conditional override ever needs
+       auditing, give it real rows — do not teach this regex to nest. */
+    if (/^@/.test(selector)) {
+      atRuleDepth += (body.match(/\{/g) || []).length; // informational only
+      continue;
+    }
+    const precededByAtRule = /@(media|supports|container)[^{}]*\{\s*$/.test(
+      css.slice(0, m.index)
+    );
+    if (precededByAtRule) continue;
+
     let target = null;
     if (/\[data-theme="dark"\]/.test(selector)) target = dark;
     else if (/(^|,)\s*:root/.test(selector)) target = light;

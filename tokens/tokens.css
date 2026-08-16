@@ -636,7 +636,11 @@
   --font-size-ui-sm: 12px;
   /* The value inside a form control: DateField input, Select trigger and its
      options, the Checkbox/Radio label. Distinct from --font-size-body (13.5px)
-     because a control's text is set one step down from prose on purpose. */
+     because a control's text is set one step down from prose on purpose.
+
+     13px HERE, 16px ON A TOUCH DEVICE — see the @media (pointer: coarse) block
+     at the end of this file. That is not a taste call and the threshold is not
+     ours; read it before changing either value. */
   --font-size-control: 13px;
   /* The ribbon's own headline.
      NOT the same as --font-size-h1 (20px), and this is the one place where two
@@ -976,5 +980,49 @@
   .e911-app, .e911-app *, .e911-app *::before, .e911-app *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* THE 16px FLOOR ON TOUCH. Reported from the field: the sign-in screen "scrolls
+   horizontally, tricky to fill out sometimes" on a phone.
+
+   It is not a layout bug — at a 375px viewport, `documentElement.scrollWidth`
+   equals `clientWidth`, so nothing overflows at rest. **iOS Safari auto-zooms
+   the viewport when focus enters an <input>, <textarea> or <select> whose
+   COMPUTED font-size is below 16px.** --font-size-control was 13px, so tapping
+   the email field zoomed the page to make 13px read as ~16px, the visual
+   viewport stopped matching the 375px layout viewport, and the page could then
+   be scrolled sideways. It does not undo itself on blur. The threshold is
+   WebKit's and is not configurable.
+
+   WHY THIS IS SCOPED TO POINTER, NOT RAISED OUTRIGHT. 13 -> 16px is +23% on
+   every form control in every E911 app, and the desk machines that are most of
+   this system's surface have no zoom behaviour to fix. The bug is a fact about
+   the DEVICE, so the value is conditional on the device — the same shape as the
+   values conditional on [data-theme], and for the same reason. A touch device
+   also simply wants the larger text.
+
+   TWO FIXES DELIBERATELY REFUSED, both of which are what a search turns up first:
+
+   · `maximum-scale=1` / `user-scalable=no` in the viewport meta. This is the
+     popular answer and it is far worse than the bug: it removes pinch-zoom for
+     every user on every screen permanently, which is a straight WCAG 1.4.4
+     failure, in order to paper over one under-sized token. The consuming app's
+     meta is `width=device-width, initial-scale=1` with no scale lock, and it
+     stays that way.
+   · A local `text-[16px]` on the login inputs. That is the anti-pattern this
+     package spent 1.7.0 and 1.8.0 removing, it fixes one screen out of every
+     screen with a field on it, and the consuming app's own guard would refuse
+     the raw class anyway. A control's size is this file's business.
+
+   The whole control FAMILY moves, not just the elements that zoom. Only
+   <input>, <textarea> and <select> trigger the behaviour, but a form whose
+   input is 16px and whose checkbox label is 13px looks broken, and the token
+   names a family. --control-height is untouched and independent by design (see
+   CONTROL_HEIGHT in core.tsx); 16px at the inherited 1.5 is a 24px line box,
+   which fits the 32px control with 4px to spare, and fits --tap-target easily. */
+@media (pointer: coarse) {
+  :root {
+    --font-size-control: 16px;
   }
 }
