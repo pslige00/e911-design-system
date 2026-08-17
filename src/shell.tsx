@@ -336,9 +336,14 @@ export function AppShell({
      for the server render. The first client render must match the HTML, and the
      effect below only corrects it after mount: guessing "narrow" would ship
      every desktop an inert rail for the length of hydration, and permanently if
-     the JS never arrives. Guessing "wide" costs a phone a few hundred ms in
-     which the off-screen panel is still tabbable, which is the bug being fixed
-     rather than a new one. */
+     the JS never arrives.
+
+     1.10.0 accepted the other side of that guess as "a phone pays a few hundred
+     ms in which the off-screen panel is still tabbable". It was measured after
+     shipping and it is not a few hundred ms: 369ms unthrottled, 902ms at 4x
+     CPU, 4268ms at 6x CPU + Slow 3G, and NEVER with JS disabled. The drawer's
+     `max-md:invisible` (see the panel's class list) is what actually pays that
+     cost now — it needs no JS at all — and this state is the belt behind it. */
   const [wideViewport, setWideViewport] = React.useState(true);
   React.useEffect(() => {
     const mq = window.matchMedia("(min-width: 48rem)");
@@ -368,13 +373,22 @@ export function AppShell({
      same eleven dead stops. The low-vision supervisor at a desk is the likeliest
      person to hit this, not the rarest.
 
-     `inert` rather than `visibility: hidden`: it is the primitive this component
-     already chose for <main> below, and it removes the subtree from the
-     accessibility tree as well as the focus order in one attribute — nothing to
-     animate, nothing to re-verify when a future control disables itself. Being
-     React state is exactly why it reads `wideViewport` above instead of asking
-     matchMedia again here: two sources for "below md" is how one of them ends
-     up disagreeing with the CSS. */
+     `inert` is the primitive this component already chose for <main> below, and
+     it removes the subtree from the accessibility tree as well as the focus
+     order in one attribute — nothing to re-verify when a future control
+     disables itself. Being React state is exactly why it reads `wideViewport`
+     above instead of asking matchMedia again here: two sources for "below md"
+     is how one of them ends up disagreeing with the CSS.
+
+     IT IS NO LONGER THE ONLY CARRIER, and it never could have been: React state
+     does not exist until the bundle has run, so this attribute fixes nothing
+     for the first few seconds of every page load and nothing at all with JS
+     off — see the measurements on `wideViewport` above. The panel's own
+     `max-md:invisible` carries the same fact in CSS and is therefore true from
+     the first paint; this one covers what CSS cannot see, which is the moment
+     the drawer is open and the viewport crosses `md` underneath it. The two are
+     keyed to the same `drawerOpen` and to the same 48rem, so they can only
+     agree. */
   const navInert = !wideViewport && !drawerOpen;
 
   /* LOCK THE PAGE UNDER THE OPEN DRAWER. Measured without it: one touch-drag
@@ -710,8 +724,63 @@ export function AppShell({
           // drawer shipped with eight unlabelled icons because of it. `open`
           // now includes `drawerOpen`, which fixes it at the source — see there.
           "max-md:w-rail-expanded",
-          "max-md:transition-transform",
-          drawerOpen ? "max-md:translate-x-0 max-md:shadow-pop" : "max-md:-translate-x-full",
+          /* `max-md:invisible` IS THE FIX FOR THE CLOSED DRAWER'S TAB ORDER.
+             `inert` above is the same fact in React state, and state does not
+             exist before hydration: measured on a 390x844 load of /now, the nav
+             became inert at 369ms unthrottled, 902ms at 4x CPU, 4268ms at 6x
+             CPU + Slow 3G, and never with JS disabled. Through that whole
+             window the 1.9.1 blocker is live and unchanged — a real Tab walk
+             ends `Dark mode`@OFFSCREEN, `Sign out`@OFFSCREEN, eleven stops with
+             no visible focus anywhere. A dispatcher who reaches for Tab as the
+             page paints gets it on every load, and with JS off it is permanent.
+
+             `visibility: hidden` is the carrier because it is the only one that
+             removes a subtree from the focus order AND the accessibility tree
+             from CSS: it is inherited, so all eleven controls go with the
+             panel, and it is scoped by the same `max-md:` the rest of the
+             drawer already uses, so it cannot disagree with `navInert` about
+             where `md` is — it IS the breakpoint, not a second reading of it.
+             `display: none` and `content-visibility: hidden` both collapse the
+             panel, and a panel with no box has nothing to slide in.
+
+             WHY VISIBILITY IS SWITCHED WITH A DELAY RATHER THAN INTERPOLATED.
+             Interpolated visibility — visibility listed at the panel's own
+             duration — computes `hidden` at progress 0. Measured in a browser
+             rather than reasoned about: `focus()` called on the same task as the
+             class flip then lands on nothing, and that is exactly what the
+             effect above does when the drawer opens, so the drawer would open
+             with focus still in the page behind it. Switching it with duration
+             0s and a DELAY has neither problem — 0s opening, so the panel is
+             visible and focusable on the same frame the class changes, and one
+             --e911-dur closing, so it cannot blink out from under a travelling
+             panel. One declaration covers both directions and only the delay is
+             overridden; two declarations would be two spellings of the same
+             transition and would drift.
+
+             THE SLIDE IS UNRELIABLE, WHICH IS WHY THE DELAY IS NOT DECORATION.
+             Measured on a running server: closing while focus is already inside
+             the rail fires `transitionrun: translate` and the panel genuinely
+             travels 0 -> -224px over ~170ms; opening from the menu button fires
+             nothing at all and jumps the full 224px in one frame. The
+             discriminator is how much else moves in the same commit — opening
+             also swaps the rail's width classes, its shadow and the inline
+             --rail-label-opacity. That inconsistency is a separate defect and is
+             deliberately NOT fixed here. What it settles for this line is that
+             the travelling case is real, so a visibility that flipped at t=0
+             would blink the panel out and leave 170ms of travel drawn over
+             nothing; and in the snapping case the delay costs a closed panel
+             170ms of `visible` while it sits off-canvas, which `inert` covers.
+
+             --e911-dur, deliberately, not the `duration-slow` further down this
+             list: that one belongs to the rail's width. 170ms is what the sheet
+             already resolved to for this element, so this is not a retiming.
+
+             Reduced motion clamps both durations to 0.01ms and does not touch
+             the delay. Same 170ms, same `inert` covering it. */
+          "max-md:[transition:translate_var(--e911-dur)_var(--e911-ease),visibility_0s_linear_var(--drawer-hide-delay,var(--e911-dur))]",
+          drawerOpen
+            ? "max-md:visible max-md:[--drawer-hide-delay:0s] max-md:translate-x-0 max-md:shadow-pop"
+            : "max-md:invisible max-md:-translate-x-full",
           // Same 160px as the grid track on `.e911-app`, so the same token — see
           // there for why the two cannot differ. RailLabel's fade deliberately
           // stays on duration-base: an opacity change is neither size nor

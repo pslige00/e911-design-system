@@ -5,6 +5,17 @@ import { cn, isFocusVisible } from "./core";
 
 /** Long enough that sweeping the rail doesn't strobe tooltips at you. */
 const DEFAULT_DELAY_MS = 350;
+/**
+ * The grace period between the pointer leaving the trigger and the bubble
+ * going away, and half of WCAG 1.4.13 "Hoverable" (AA). `GAP` px of dead space
+ * separate trigger from bubble, so closing synchronously on `pointerleave` —
+ * which is what this did until now — killed the bubble *before* the pointer
+ * could arrive: the one gesture that reads a tooltip too big to take in at a
+ * glance was also the gesture that dismissed it. The figure is sized for the
+ * slow crossing, not the fast one: at 400% zoom, a routine desk configuration
+ * on this floor, those 8px are 32 device pixels of hand travel.
+ */
+const CLOSE_DELAY_MS = 250;
 const GAP = 8;
 
 /** useLayoutEffect warns when a client component gets server-rendered first. */
@@ -87,6 +98,18 @@ export function Tooltip({
     [cancel]
   );
 
+  const closeAfter = React.useCallback(
+    (ms: number) => {
+      // Shares `timer` with openAfter on purpose: open and close are the same
+      // transition seen from two sides, and only the last one asked for may
+      // land. On separate timers a pointer swept across a rail leaves both
+      // pending and the loser wins about half the time.
+      cancel();
+      timer.current = window.setTimeout(() => setOpen(false), ms);
+    },
+    [cancel]
+  );
+
   React.useEffect(() => cancel, [cancel]);
 
   useIsoLayoutEffect(() => {
@@ -154,11 +177,20 @@ export function Tooltip({
       anchorRef.current = e.currentTarget;
       // Touch has no hover: the press itself is the interaction, and a tooltip
       // that opens under the finger only hides what was just tapped.
+      //
+      // KNOWN GAP, not a decision this guard should be read as settling: with
+      // `onPointerDown` closing too, `content` is unreachable for a sighted
+      // touch user while a screen reader still reads the mounted copy below —
+      // on a wall tablet, which is the device this system exists for. Until
+      // that has its own pass, do not put a fact in a Tooltip that is stated
+      // nowhere else.
       if (e.pointerType !== "touch") openAfter(delay);
     },
     onPointerLeave: (e: React.PointerEvent<HTMLElement>) => {
       childProps.onPointerLeave?.(e);
-      close();
+      // NOT close(): the pointer may be on its way to the bubble. See
+      // CLOSE_DELAY_MS — the bubble's own pointerenter is what cancels this.
+      closeAfter(CLOSE_DELAY_MS);
     },
     onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
       childProps.onPointerDown?.(e);
@@ -201,8 +233,24 @@ export function Tooltip({
           ref={bubbleRef}
           aria-hidden
           style={style}
+          // The other half of 1.4.13 Hoverable, and the half the grace period
+          // alone cannot buy: a bubble that hears no pointer events cannot hold
+          // a hover, so `pointer-events-none` here meant the pointer could
+          // reach the bubble and it would still close on the trigger's timer.
+          // Both halves are needed — this to survive the dwell, CLOSE_DELAY_MS
+          // to survive the crossing.
+          onPointerEnter={cancel}
+          onPointerLeave={() => closeAfter(CLOSE_DELAY_MS)}
+          // What being hoverable costs, paid deliberately: while it is up the
+          // bubble is what a press lands on, and on the coverage grid it covers
+          // about seven cells. Closing on its own pointerdown spends one click
+          // getting out of the way, rather than leaving an operator pressing a
+          // cell that cannot hear him. `aria-hidden` stays regardless — the
+          // mounted copy above is the only one in the a11y tree, and two would
+          // be read twice.
+          onPointerDown={close}
           className={cn(
-            "pointer-events-none z-popover max-w-[240px] rounded-sm border border-line bg-card",
+            "z-popover max-w-[240px] rounded-sm border border-line bg-card",
             "px-2 py-1 text-ui-sm font-medium text-ink shadow-pop"
           )}
         >

@@ -570,6 +570,25 @@ export function DateField({
           role="dialog"
           aria-label="Choose date"
           style={layerStyle}
+          // Everything in this popover that is NOT a control: the 8px padding
+          // band, the header's gaps, and the 2px gutters `gap-0.5` opened up
+          // between the day cells below. Focus is set as the default action of
+          // mousedown, so a press on any of that moved focus to the nearest
+          // focusable ancestor — `<main>` — which trips the wrapper's onBlur,
+          // and that path is `setOpen(false)` with no refocus. The calendar
+          // vanished mid-selection and the operator's focus was on a landmark.
+          //
+          // The `button` exemption is load-bearing, and it is why this is not
+          // the same blanket guard the listbox in select.tsx can afford. Guard
+          // the whole popover and a press on "Next month" no longer focuses
+          // that button: focus stays on the day cell it was on, that cell
+          // unmounts with the old month, and focus falls to <body> — measured,
+          // and from <body> Escape is dead, which is the bug this is fixing
+          // wearing a different hat. Day cells are the same story: they own a
+          // roving tabindex and must keep taking focus normally.
+          onMouseDown={(e) => {
+            if (!(e.target instanceof Element) || !e.target.closest("button")) e.preventDefault();
+          }}
           className="z-popover rounded-md border border-line bg-card p-2 shadow-pop"
         >
           <div className="flex items-center gap-1">

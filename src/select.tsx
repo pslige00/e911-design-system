@@ -494,13 +494,32 @@ export function Select<T extends string = string>({
           aria-label={aria["aria-label"]}
           aria-labelledby={aria["aria-labelledby"]}
           style={layerStyle}
+          // THE WHOLE POPOVER, not just the rows. Focus is set as the default
+          // action of mousedown, and every `<li>` below suppresses it to keep
+          // DOM focus on the trigger — but the container itself did not, so the
+          // 4px padding band and the 2px gutters between rows were live surface
+          // that moved focus to the nearest focusable ancestor. Measured on
+          // /admin/policy, where that ancestor is a TabPanel div: focus landed
+          // on it with no visible indicator (mouse focus, so :focus-visible
+          // does not match), the listbox stayed open with `aria-expanded=true`,
+          // Escape was dead because its handler is on the trigger, ArrowDown
+          // scrolled the DOCUMENT instead of the options, and one Tab + Enter
+          // later two comboboxes both reported themselves expanded — WCAG 4.1.2.
+          // Nothing inside this list is focusable, so there is nothing for the
+          // guard to swallow. The per-row handlers are now strictly redundant
+          // and stay only so a row keeps its own guarantee if this list ever
+          // stops being their parent.
+          onMouseDown={(e) => e.preventDefault()}
           className={cn(
             // `gap-0.5` (1.10.0): the rows used to be stacked with literally 0px
             // between them, so a 44px target's miss always landed on a live
             // neighbour rather than on nothing. Two pixels is not a margin of
             // safety, but it is a boundary — and it is what makes the
             // slide-off-and-let-go correction below something an operator can
-            // aim at. Costs 2px per row of popover height and nothing else.
+            // aim at. It costs 2px per row of popover height — and, until the
+            // guard above, 14.6% of a two-option popover in surface that
+            // answered a press by breaking the control. A gutter between
+            // targets is only clearance if landing in it does nothing.
             "z-popover flex flex-col gap-0.5 overflow-y-auto overscroll-contain",
             "rounded-sm border border-line bg-card p-1 shadow-pop"
           )}

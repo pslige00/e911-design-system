@@ -96,12 +96,24 @@ export function Tabs({
      focus on a tab outside the strip's visible box (2.4.11), which is exactly
      what /schedule at 320px did before the strip scrolled. Explicit rather than
      trusting focus() to scroll an ancestor, because that behaviour is the UA's
-     to choose and it ignores the scroll-padding this strip declares. */
+     to choose and it ignores the scroll-padding this strip declares.
+
+     `center`, not `nearest`, and that word is load-bearing: the strip snaps
+     (`scroll-snap-type: x proximity`, below) and a proximity snap re-runs after
+     EVERY scroll, this one included, landing on whichever snap point is nearest
+     the destination with no regard for the element the scroll was made for. A
+     `nearest` scroll moves the minimum, so the destination stays close to the
+     snap point it started from and the engine pulls it back: measured, that
+     left the focused "Coverage" 16px outside the strip on /schedule at 320px
+     and "Trades" 19px outside at 390px, with the focus ring's right segment
+     clipped off with them. Assigning scrollLeft by hand changes nothing — the
+     snap happens afterwards either way. Centring overshoots far enough that the
+     nearest snap point is one that still shows the whole tab. */
   const focusTab = (index: number) => {
     const node = tabRefs.current[index];
     if (!node) return;
     node.focus();
-    node.scrollIntoView({ inline: "nearest", block: "nearest" });
+    node.scrollIntoView({ inline: "center", block: "nearest" });
   };
 
   const move = (from: number, delta: number) => {
@@ -171,12 +183,36 @@ export function Tabs({
              that reaches the end from chaining into the browser's back
              gesture, which on a phone loses the page.
 
-             Deliberately NOT `overflow-y: hidden`: the strip's scrollable
-             overflow is 1px taller than its box because the active tab's rule
-             sits astride the strip's bottom border, and clipping it would halve
-             the one mark that says which tab you are on. 1px of hidden vertical
-             scroll costs nothing; the indicator does not. */
+             THIS BOX CLIPS VERTICALLY AND THERE IS NO OPTING OUT. The comment
+             that shipped here in 1.10.0 said the reverse — that `overflow-y`
+             was deliberately left alone so it would stay `visible` and the
+             active rule could hang a pixel below the box. Per CSS Overflow 3 a
+             computed `visible` becomes `auto` the moment the other axis is
+             neither `visible` nor `clip`, so `overflow-y` is `auto` here
+             (measured, with scrollHeight 45 against clientHeight 44); the
+             rule's outer pixel sat in the scrollable overflow region and never
+             painted, and the indicator was half height at every viewport in
+             both themes for the whole of 1.10.0. The author had the failure
+             exactly right and then relied on a value the cascade will not give
+             you. `overflow-y: clip` with an `overflow-clip-margin` does not buy
+             the pixel back either: on a box that is already a scroll container
+             `clip` computes to `hidden` and the margin is ignored — measured at
+             0, 2 and 8px, identical pixels. So anything that must be seen has
+             to be INSIDE the box. That is why the active rule is now
+             `after:bottom-0` and why the focus indicator is drawn inward. */
           "min-w-0 overflow-x-auto overscroll-x-contain",
+          /* A tab is exactly the strip's height, so the system's outward focus
+             indicator — a 2px outline at +2px offset over a 5px halo — had
+             nowhere to paint: measured reach T=0 B=-1 on every tab at every
+             viewport in both themes, two disconnected vertical bars where there
+             should be a perimeter (WCAG 2.4.11), and one bar on the first and
+             last tabs when they sit against the strip's own edges. This class
+             is the package's existing answer for a clipping container, and the
+             rail in shell.tsx carries it for exactly this reason: tokens.css
+             redraws the indicator inward for anything inside it. Delete it and
+             the ring loses its top and bottom on a desk machine at full size,
+             with nothing to show for it but a screenshot. */
+          "e911-card-flush",
           /* The rail (shell.tsx) is the only other place this system hides a
              scrollbar, for the same reason: a classic one would take ~15px of
              the strip's 44px height on the platforms that still draw them, and
@@ -239,10 +275,14 @@ export function Tabs({
                 active
                   ? "font-semibold text-brand-text"
                   : "font-medium text-muted hover:text-ink",
-                // The rule overlaps the tablist's own 1px border and is inset
-                // from the label so it reads as an underline, not a full-width tab.
+                // Inset from the label so it reads as an underline rather than
+                // a full-width tab. `bottom-0`, not `-bottom-px`: the strip
+                // clips vertically (see the tablist), so the rule sits on the
+                // last 2px inside the tab, directly above the tablist's own
+                // border instead of astride it. A pixel outside the box is a
+                // pixel that never paints.
                 active &&
-                  "after:absolute after:inset-x-2 after:-bottom-px after:h-[2px] after:rounded-pill after:bg-action after:content-['']"
+                  "after:absolute after:inset-x-2 after:bottom-0 after:h-[2px] after:rounded-pill after:bg-action after:content-['']"
               )}
             >
               {item.label}

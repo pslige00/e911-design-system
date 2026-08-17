@@ -389,8 +389,18 @@ export function CertChip({ tone = "neutral", toneLabel, children, className, ...
           no accessible NAME to hang either of those on — the only thing a
           screen reader will ever say about it is its text content. A leading
           comma, because "EMD 21d warning" is one phrase and "EMD 21d, warning"
-          is two. */}
-      {spoken ? <span className="sr-only">{`, ${spoken}`}</span> : null}
+          is two.
+
+          `select-none` keeps it out of the CLIPBOARD without keeping it out of
+          the accessibility tree: a range that spans this chip serialises to
+          "HOLDOVER" again, not "HOLDOVER, warning", so a supervisor quoting a
+          badge or an exception code into an incident note pastes the code he
+          pointed at. Chromium and Gecko both drop `user-select: none` text from
+          a selection and neither drops it from the tree — the AX node is still
+          a plain StaticText, which is what a reader announces. Do not reach for
+          `aria-label` here instead: this span has no role, so ARIA prohibits it
+          and a conforming reader is entitled to say nothing at all. */}
+      {spoken ? <span className="sr-only select-none">{`, ${spoken}`}</span> : null}
     </span>
   );
 }

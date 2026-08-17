@@ -458,11 +458,18 @@
   --shadow-pop:  0 8px 30px -12px rgba(49, 38, 28, 0.28);
 
   /* component metrics (density: Terrazzo) */
-  /* DESK VALUES. Both are raised — to 44 and 36 — under the
+  /* DESK VALUES. All three of --control-height, --control-height-sm and
+     --row-height are raised — to 44, 36 and 52 — under the
      `@media (pointer: coarse)` block at the end of this file, because the floor
      below is a promise and 32/28 was not keeping it. Read that block before
-     quoting either number: on the wall tablets these apps were built for, the
-     one this file is loudest about, they are not what ships. */
+     quoting any of these numbers: on the wall tablets these apps were built
+     for, the one this file is loudest about, they are not what ships.
+
+     --row-height is 8px more than --control-height, and that is the relation
+     rather than a coincidence of two literals: 8px is the clearance a row keeps
+     around a full-height control inside it, and it is what the coarse block
+     re-derives instead of inventing a number. Change one and the other owes an
+     answer. */
   --control-height: 32px;
   --control-height-sm: 28px;
   --tap-target: 44px;              /* touch floor — these apps run on wall tablets,
@@ -1103,11 +1110,45 @@
    size="tap"; the guard is simply keyed to the size NAME rather than to the
    resolved height, and rekeying it belongs in select.tsx, not here. Recorded
    because a future reader who finds a 56px hit area deserves to know it was
-   measured and not missed. */
+   measured and not missed.
+
+   ---------------------------------------------------------------------------
+   --row-height HAS TO COME WITH THEM, and leaving it behind in 1.10.0 made two
+   adjacent Approve buttons CLOSER TOGETHER than they were before that fix.
+   Growing a control inside a fixed-height row spends the row's clearance, and
+   the clearance is the entire margin for error. Measured on /approvals at
+   1024x768 with --row-height still 40px at both pointer types:
+
+     fine pointer    Approve 71.6x28   vertical gap to the next row's Approve 12px
+     coarse pointer  Approve 71.6x36   vertical gap to the next row's Approve  4px
+
+   Four pixels between THIS person's Approve and the NEXT person's Approve, in a
+   column of 120 identically drawn buttons, pressed by a gloved hand on a wall
+   tablet. A mis-tap there does not fail and ask again — it succeeds against the
+   wrong wage record, and the confirmation names somebody the operator was not
+   aiming at. The same 4px separated 200 "Mark seen" buttons, which commit with
+   no dialog at all. A raise that moves the dangerous targets together is worse
+   than the gap it closed.
+
+   52 IS DERIVED, NOT CHOSEN. --row-height is --control-height + 8px on the desk
+   (40 = 32 + 8): that is the clearance a row keeps around a full-height control
+   inside it, 4px above and 4px below. 44 + 8 = 52 keeps exactly that promise on
+   touch, lands on the same 4px grid as every other metric here, and gives the
+   --control-height-sm control these rows actually hold 52 - 36 = 16px of
+   separation — more than the 12px it had before 1.10.0 raised the buttons,
+   which is the direction this should have moved in the first place.
+
+   THE BLAST RADIUS IS THREE CALL SITES and they are all the same row: the
+   DataTable `<td>`, its loading `<td>`, and `Skeleton size="row"`, which exists
+   to match them. The column header takes `py-2` and does not move; no E911 app
+   names the token. What it does cost is length — a 200-row queue is 2400px
+   taller on a tablet — which is what touch density means. The alternative is
+   the 4px above. */
 @media (pointer: coarse) {
   :root {
     --font-size-control: 16px;
     --control-height: 44px;
     --control-height-sm: 36px;
+    --row-height: 52px;
   }
 }
