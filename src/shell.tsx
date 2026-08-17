@@ -225,7 +225,6 @@ export function AppShell({
 
   const [hoverOpen, setHoverOpen] = React.useState(false);
   const [focusOpen, setFocusOpen] = React.useState(false);
-  const open = pinned || hoverOpen || focusOpen;
 
   /* THE DRAWER (1.9.0). Below `md` the rail was `display: none` with nothing in
      its place — no menu button, no tab bar, nothing else in the DOM reaching
@@ -247,6 +246,25 @@ export function AppShell({
      same focus indicator. Below `md` the nav becomes a fixed panel that slides
      in; above it, nothing about the rail changes. */
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  /* `drawerOpen` is the fourth way the rail opens, and leaving it out of this
+     shipped the drawer with invisible labels — eight unlabelled icons and no
+     text on any row.
+
+     The mistake was not the omission, it was believing CSS could cover it.
+     1.9.0 set `--rail-label-opacity` INLINE from this value and then wrote a
+     `max-md:` class to force it to 1 on mobile, reasoning that scoping it in
+     CSS avoided a stale React value across the breakpoint. **An inline style
+     beats any class on the same property, whatever media query the class sits
+     in** — so that override could never fire, and never did.
+
+     Folding it in here fixes the property at its source and keeps the other
+     three consumers of `open` honest at the same time: with the drawer open the
+     rail genuinely IS expanded, so `data-expanded`, the width and the shadow
+     should all say so rather than only the label. `open` feeds no timer, so
+     there is no loop back into the hover machinery — the timers write
+     `hoverOpen`, they never read this. */
+  const open = pinned || hoverOpen || focusOpen || drawerOpen;
   const menuButtonRef = React.useRef<HTMLButtonElement | null>(null);
   const navRef = React.useRef<HTMLElement | null>(null);
 
@@ -550,13 +568,18 @@ export function AppShell({
           // the full width. z-dialog, not z-rail: the backdrop is at z-rail and
           // the panel has to be above it.
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-dialog",
-          // Always the expanded presentation on a phone. There is no hover to
-          // peek with and no room for an icon-only column beside content, so the
-          // drawer is the labelled rail or it is nothing. The label opacity is
-          // forced in CSS rather than from React state so that a resize across
-          // the breakpoint cannot leave a stale value behind — the drawer's own
-          // `open` state is meaningless above md and vice versa.
-          "max-md:w-rail-expanded max-md:[--rail-label-opacity:1]",
+          // Always the expanded WIDTH on a phone, even while closed: the panel
+          // slides in from off-screen, and a 64px panel sliding in would be the
+          // collapsed rail with nowhere for a label to appear. This one is
+          // genuinely CSS-only — it must hold regardless of any React state.
+          //
+          // The label OPACITY is deliberately not forced here. 1.9.0 tried
+          // exactly that and it never once applied: the opacity is set as an
+          // INLINE style from `open`, and an inline style beats any class on the
+          // same property no matter what media query the class is scoped in. The
+          // drawer shipped with eight unlabelled icons because of it. `open`
+          // now includes `drawerOpen`, which fixes it at the source — see there.
+          "max-md:w-rail-expanded",
           "max-md:transition-transform",
           drawerOpen ? "max-md:translate-x-0 max-md:shadow-pop" : "max-md:-translate-x-full",
           // Same 160px as the grid track on `.e911-app`, so the same token — see
