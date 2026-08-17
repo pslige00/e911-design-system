@@ -14,6 +14,26 @@ import { cn, type ControlSize, type EdgeColor, type Tone } from "./contract";
 
 /* ---------------------------------------------------------- control sizes */
 /**
+ * Button's size union: every ControlSize, plus the one tier only a Button offers.
+ *
+ * DECLARED HERE RATHER THAN BY WIDENING ControlSize ITSELF, and that choice is
+ * the whole blast radius of the kiosk tier. ControlSize is the contract six
+ * components share, so a fourth member would oblige Chip, Select, DateField,
+ * FormField, Checkbox and Radio to answer for a value none of them has a design
+ * for — a 64px checkbox is a tile, a 64px Select trigger is a panel, and each
+ * would have to invent something or throw. Those components already NARROW the
+ * shared union (`Extract<ControlSize, "md" | "tap">`); this is the same move in
+ * the other direction, and it keeps `size` meaning one thing wherever it
+ * appears rather than meaning "whatever this component happened to implement".
+ *
+ * `kiosk` graduates into ControlSize itself when a second and third component
+ * genuinely need it — a kiosk filter row, a keypad that becomes a component
+ * here — on the same evidence test --font-size-glance had to pass in 1.8.0.
+ * One consumer is a Button prop; three is a family.
+ */
+export type ButtonSize = ControlSize | "kiosk";
+
+/**
  * The painted height of every control in the system, in one place, because five
  * components offer `size` and a form is only coherent if they agree. Height
  * only: horizontal padding belongs to the control (a Button is padded for a
@@ -24,35 +44,69 @@ import { cn, type ControlSize, type EdgeColor, type Tone } from "./contract";
  * `tap` is --tap-target, the same 44px floor the rail rows and the calendar
  * cells already use, so a tap-sized form lines up with the shell around it.
  *
- * THE PIXELS BELOW ARE THE DESK ONES. As of 1.10.0 --control-height and
- * --control-height-sm are raised under `@media (pointer: coarse)`, so on a wall
- * tablet `md` is 44px and `sm` is 36px and `md` and `tap` paint the same box.
- * That is deliberate — see the block at the end of tokens.css for the argument —
- * but it means this table is a map of NAMES to tokens, not of names to numbers,
- * and anyone reading "32px" off it while debugging a tablet screenshot is
- * reading the wrong device's value. `tap` still exists on a coarse pointer
- * because it is the size a consumer asks for EXPLICITLY when a control is the
- * primary finger target on a desk machine too — a kiosk on a touchscreen PC.
+ * `kiosk` (1.11.0) IS THE ONE ROW WHERE TYPE DOES FOLLOW SIZE, and the sentence
+ * above is why it took a new name instead of a fourth height. It is
+ * --kiosk-target (64px) AND --font-size-kiosk (18px) together, because the
+ * surface it describes is not "a finger instead of a mouse" but "a screen on a
+ * wall that a standing dispatcher reads and presses". Keyed to ButtonSize, so
+ * every other component's `CONTROL_HEIGHT[size]` still type-checks against the
+ * narrower unions they declare. See ButtonSize.
+ *
+ * SPELLED AS A var() REFERENCE, NOT AS A NAMED `h-ctl-kiosk`, and that is a
+ * decision rather than a shortcut. A named utility has to be declared TWICE —
+ * once in tokens/tailwind-v4.css and once in tokens/tailwind.preset.js — and a
+ * metric that resolves in one port and silently drops in the other is this
+ * package's oldest failure shape; it is the argument that decided the
+ * pointer-coarse block at the end of tokens.css. A bracketed var() is read
+ * identically by both ports with no mapping at all. It is also not what the
+ * anti-pattern list bans: what is banned is `h-[64px]`, a number with no token
+ * behind it. The token stays the single source of truth here — only the route
+ * to it is shorter. Naming the two utilities is a tidy-up in the two mapping
+ * files whenever someone is in them, and changes nothing that renders.
+ *
+ * THE PIXELS BELOW ARE THE DESK ONES, for everything except `kiosk`. As of
+ * 1.10.0 --control-height and --control-height-sm are raised under
+ * `@media (pointer: coarse)`, so on a wall tablet `md` is 44px and `sm` is 36px
+ * and `md` and `tap` paint the same box. That is deliberate — see the block at
+ * the end of tokens.css for the argument — but it means this table is a map of
+ * NAMES to tokens, not of names to numbers, and anyone reading "32px" off it
+ * while debugging a tablet screenshot is reading the wrong device's value.
+ * `tap` still exists on a coarse pointer because it is the size a consumer asks
+ * for EXPLICITLY when a control is the primary finger target on a desk machine
+ * too — a kiosk on a touchscreen PC. `kiosk` is the row that does not move:
+ * 64px at both pointer types, on purpose, so the size a reviewer sees on a desk
+ * machine is the size the dispatcher gets.
  */
-export const CONTROL_HEIGHT: Record<ControlSize, string> = {
+export const CONTROL_HEIGHT: Record<ButtonSize, string> = {
   sm: "h-ctl-sm",
   md: "h-ctl",
   tap: "h-tap",
+  kiosk: "h-[var(--kiosk-target)]",
 };
 
 /**
- * The same three heights as a FLOOR rather than a fixed box, for the one case
- * that has to be able to grow: a button whose label wraps (see `wrap` below).
+ * The same heights as a FLOOR rather than a fixed box, for the one case that
+ * has to be able to grow: a button whose label wraps (see `wrap` below).
  *
  * Not a general-purpose alternative to CONTROL_HEIGHT. Every other control in
  * the system holds a single line by construction — an input, a Select trigger,
  * a calendar cell — and a fixed height is what keeps a row of them on one
  * baseline. Only a Button gets handed arbitrary prose by a consumer.
+ *
+ * THE `kiosk` ROW IS REACHABLE ONLY VIA `wrap`, WHICH IS WHY THAT PROP DOES NOT
+ * DEFAULT TRUE THERE. `min-h-[var(--kiosk-target)]` is emitted after `min-h-16`
+ * and `min-h-20` in the generated sheet — measured at 9599 against 9416 and
+ * 9477 in a build of this package's own tokens — so it OUTRANKS the `min-h-*`
+ * that a consuming kiosk uses as its one working height override, and a hero
+ * button asking for 80px would silently get 64. A consumer opting a control
+ * into this tier must drop its own `min-h-*` in the same edit; `wrap` staying
+ * false by default is what keeps that from happening by accident.
  */
-const CONTROL_MIN_HEIGHT: Record<ControlSize, string> = {
+const CONTROL_MIN_HEIGHT: Record<ButtonSize, string> = {
   sm: "min-h-ctl-sm",
   md: "min-h-ctl",
   tap: "min-h-tap",
+  kiosk: "min-h-[var(--kiosk-target)]",
 };
 
 /* ------------------------------------------------------------- focus util */
@@ -85,11 +139,32 @@ export interface ButtonProps
    * `className="min-h-tap"`, which works on a Button and does not work on any
    * control whose className lands on a wrapper — so the name is the system's
    * now. See ControlSize.
+   *
+   * `kiosk` (1.11.0) is --kiosk-target tall (64px) with --font-size-kiosk type
+   * (18px), in BOTH pointer contexts, for a control on a screen bolted to a
+   * wall. Button is the only component that offers it — see ButtonSize.
+   *
+   * IT EXISTS BECAUSE THE className ESCAPE HATCH FOR TYPE IS CLOSED, AND THE
+   * NEXT PERSON HERE WILL BE TEMPTED TO REOPEN IT. Do not. 1.10.0 moved this
+   * component from `text-body` to `text-control` for a good reason, and
+   * `.text-control` is emitted AFTER every `.text-[Npx]` in the generated sheet
+   * at the same specificity — on a clean 1.10.1 build, `.text-body` 27735,
+   * `.text-[18px]` 28819, `.text-control` 28981 — so every arbitrary font size
+   * a caller had put on a Button went dead in one release, with no error and no
+   * warning. The consuming kiosk lost four of them, including "Touch to punch",
+   * which asked for 18px and rendered 13px on a desk and 16px on the tablet.
+   *
+   * The fix is NOT to make the caller's literal win again. An app forbidden to
+   * style locally is forbidden precisely so that type is this package's
+   * decision, and a system whose sizes can be overridden by whoever happens to
+   * sort later is not a system, it is a race — one this package would have to
+   * re-run every time a token is renamed. The fix is that the size a kiosk
+   * needs is now a size it can ASK FOR.
    */
-  size?: ControlSize;
+  size?: ButtonSize;
   /**
    * Let a long label wrap onto a second line instead of pushing the page
-   * sideways. Defaults to `true` at `tap` and `false` at `sm`/`md`.
+   * sideways. Defaults to `true` at `tap`, and `false` at `sm`/`md`/`kiosk`.
    *
    * THIS PROP EXISTS BECAUSE THE CLASSNAME ESCAPE HATCH DOES NOT WORK HERE, and
    * that is not obvious from the outside. `whitespace-nowrap` is in this
@@ -106,6 +181,20 @@ export interface ButtonProps
    * fixed height are the same 44px. `sm`/`md` keep nowrap because a desk-density
    * button that silently grows to two lines breaks the row it sits in — there
    * the consumer knows the label and asks for wrapping deliberately.
+   *
+   * `kiosk` KEEPS NOWRAP TOO, WHICH LOOKS BACKWARDS AND IS MEASURED. `wrap` is
+   * about label length against column width, not about size: `tap` is asked for
+   * by ordinary app screens where a consumer hands a Button arbitrary prose in a
+   * narrow column, and a kiosk label is a few words by construction because it
+   * is read from across a room. Measured in the real faces at 1024x768, the
+   * longest label on that screen — "Start break" — is 97.4px inside the
+   * tightest box it has, a 222px action-grid cell. Nothing there is close to
+   * wrapping. The cost of defaulting it true is not hypothetical: it swaps the
+   * fixed height for a `min-height`, which is the same property the consuming
+   * kiosk uses as its only working height override, and this package's
+   * `min-h-[var(--kiosk-target)]` sorts after the app's `min-h-20` — so a hero
+   * asking for 80px would quietly become 64. Pass `wrap` explicitly for a
+   * genuinely long kiosk label and drop the app-side `min-h-*` when you do.
    */
   wrap?: boolean;
 }
@@ -144,6 +233,39 @@ const buttonVariant: Record<ButtonVariant, string> = {
  * compound variant outranks it outright, so a disabled button does not light up
  * under the pointer.
  */
+/**
+ * Padding and type, one row per size. A table rather than the nested ternary
+ * this was through 1.10.x: four arms is where that stopped being readable, and
+ * the invariant it has to protect is one a table shows and a ternary hides —
+ * EXACTLY ONE FONT SIZE PER ROW, always. Two font-size utilities on one element
+ * are decided by Tailwind's emit order rather than by ours, which is precisely
+ * the bug this tier was minted to answer; `text-ui-sm` happens to sort after
+ * `text-control` today and a theme-key rename would flip it with nothing
+ * failing anywhere.
+ *
+ * `sm` is the one row that steps the type down, which it did before 1.5.0 too —
+ * `text-ui-sm` is the small-UI tier and deliberately does not move on a touch
+ * device either. `md`/`tap` take `text-control` (1.10.0): a Button's label is
+ * text inside a control, and --font-size-control is the token for that, which
+ * is also the one token that rises to 16px under `@media (pointer: coarse)`. On
+ * `text-body` the Button was the one member of the control family the touch
+ * bump could not reach — measured on a wall tablet, a Select trigger at 16px
+ * and the Button beside it at 13.5px. Desk machines lose half a pixel on a
+ * button label and gain a control family that agrees.
+ *
+ * `kiosk` KEEPS `tap`'s px-4. A fourth padding step would need an argument from
+ * a measurement and there isn't one: almost every control on a kiosk is
+ * `w-full`, so horizontal padding only sets the minimum width of the two that
+ * shrink to fit — Cancel, and a keypad digit — and 16px on a 64px-tall box is
+ * already more than the px-3.5 those two render with today.
+ */
+const buttonSize: Record<ButtonSize, string> = {
+  sm: "px-2.5 text-ui-sm",
+  md: "px-3.5 text-control",
+  tap: "px-4 text-control",
+  kiosk: "px-4 text-[length:var(--font-size-kiosk)]",
+};
+
 const buttonDisabled =
   "disabled:cursor-not-allowed disabled:bg-disabled disabled:text-disabled-fg " +
   "disabled:border-line-disabled disabled:hover:bg-disabled " +
@@ -168,26 +290,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           ? `${CONTROL_MIN_HEIGHT[size]} whitespace-normal text-center py-1`
           : `${CONTROL_HEIGHT[size]} whitespace-nowrap`,
         // Padding follows the height so the label keeps its optical margins,
-        // and only `sm` also steps the type down, which it did before 1.5.0 too
-        // — it stays on `text-ui-sm`, the small-UI tier, which deliberately does
-        // not move on a touch device either. See the end of tokens.css.
-        //
-        // text-control, NOT text-body (1.10.0). A Button's label is text inside a
-        // control, and --font-size-control is the token for that — which is also
-        // the one token that rises to 16px under `@media (pointer: coarse)`. On
-        // `text-body` the Button was the one member of the control family the
-        // touch bump could not reach: measured on a wall tablet, a Select
-        // trigger rendered at 16px and the Button beside it at 13.5px, and
-        // "Clock in" — the most-pressed control in the building — carried a
-        // 13.5px label at arm's length in a dark room. Desk machines lose 0.5px
-        // on a button label and gain a control family that agrees.
-        //
-        // Written into the size branch rather than sitting in the base string
-        // beside `text-ui-sm`, because two font-size utilities on one element is
-        // decided by Tailwind's emit order, not by ours. `text-ui-sm` happens to
-        // sort after `text-control` today; a theme-key rename would flip it and
-        // nothing would fail. Exactly one font size per branch, always.
-        size === "sm" ? "px-2.5 text-ui-sm" : size === "tap" ? "px-4 text-control" : "px-3.5 text-control",
+        // and the type comes from the same row so a size cannot be half-applied.
+        // See buttonSize — one font size per row is the rule it protects.
+        buttonSize[size],
         buttonVariant[variant],
         className
       )}

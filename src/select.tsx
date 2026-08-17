@@ -87,9 +87,16 @@ export function useAnchoredLayer(
 
     // Content can change height after mount (calendar month with six rows,
     // a filtered option list) — re-place instead of leaving it mispositioned.
+    // `typeof` guard, not just the null check: jsdom has no ResizeObserver, and
+    // an unguarded `new` is a ReferenceError that kills the whole test file — in
+    // a CONSUMER's suite, naming neither this package nor the component. This
+    // hook backs Select, DateField and every anchored layer, so it is the single
+    // widest blast radius in the package. Re-placement is a refinement over a
+    // layer that is already positioned once on open.
     const layer = layerRef.current;
-    const ro = layer ? new ResizeObserver(() => place()) : null;
-    if (layer && ro) ro.observe(layer);
+    const ro =
+      layer && typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => place()) : null;
+    if (ro) ro.observe(layer!);
 
     return () => {
       window.removeEventListener("scroll", onScroll, true);

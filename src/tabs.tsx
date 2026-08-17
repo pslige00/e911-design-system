@@ -80,12 +80,21 @@ export function Tabs({
     // label does — a late font, a longer word in an updated items prop. The
     // children are observed too because a fade that is wrong after a font swap
     // is wrong in the direction that hides tabs, and nothing reports it.
-    const observer = new ResizeObserver(syncEdges);
-    observer.observe(strip);
-    for (const child of Array.from(strip.children)) observer.observe(child);
+    // Guarded because jsdom has no ResizeObserver, and an unguarded `new` there
+    // is a ReferenceError that takes the whole test file with it — in a
+    // CONSUMER's suite, with a message naming neither this package nor the
+    // component they rendered. The fade is a progressive enhancement over a
+    // strip that is already scrollable and keyboard-operable, so losing it in a
+    // non-layout environment costs nothing. data.tsx guards its two the same way.
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(syncEdges);
+    if (observer) {
+      observer.observe(strip);
+      for (const child of Array.from(strip.children)) observer.observe(child);
+    }
     strip.addEventListener("scroll", syncEdges, { passive: true });
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       strip.removeEventListener("scroll", syncEdges);
     };
   }, [syncEdges, items]);

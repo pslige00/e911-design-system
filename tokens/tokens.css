@@ -477,6 +477,33 @@
                                       when its painted box is --control-height */
   --row-height: 40px;
 
+  /* THE KIOSK'S OWN FLOOR (1.11.0), the way --tap-target is touch's, and the
+     height half of `<Button size="kiosk">`. 44px is the floor for a finger that
+     is already aimed at something; a kiosk is bolted to a wall, pressed while
+     standing, at shift change, often through a glove, by someone who has not
+     looked at it yet.
+
+     64 IS THE CONSUMING KIOSK'S OWN NUMBER, NOT A CHOSEN ONE — the same route
+     --font-size-glance took in 1.8.0, and for the same reason. Five of the seven
+     controls on that screen are already exactly this tall (`min-h-16`), and the
+     file's own comment names it "the smallest size already in use elsewhere on
+     this screen"; the two that reach 80 are a hero and a 2-up action grid
+     choosing to exceed a floor, which is what a floor is for. It corroborates
+     elsewhere: --rail-width is 64px and derives itself as "one 44px tap target
+     + gutters" — the one other place this system has had to answer "how big is
+     a target somebody hits standing up", answered independently, and answered
+     the same number.
+
+     NOT DERIVED FROM --rail-width, and not from --tap-target either. Same
+     reasoning as --tag-dot-size sitting beside an identical --e911-radius-xs:
+     one is a width, one is a height, and a density pass on the rail must not
+     silently resize the punch button. Two values, one number, separate reasons.
+
+     NOT RAISED UNDER `pointer: coarse` — see the last paragraph of that block
+     at the end of this file, which is where anyone expecting it to move will
+     look first. */
+  --kiosk-target: 64px;
+
   /* The PAINTED box of a boolean control — Checkbox, Radio (1.6.0). It is a
      separate metric from --control-height on purpose, and the reason is the one
      thing that makes a checkbox different from every other control in the
@@ -654,6 +681,46 @@
      at the end of this file. That is not a taste call and the threshold is not
      ours; read it before changing either value. */
   --font-size-control: 13px;
+  /* The same text one tier further out: a control on a surface nobody sits at.
+     The type half of `<Button size="kiosk">`, and 18px at BOTH pointer types.
+     Added 1.11.0.
+
+     WHY THE CONTROL TIER NEEDS A THIRD STEP AT ALL, given the token above
+     already moves 13 -> 16 on touch. Those two values answer questions about a
+     DEVICE — a desk machine, and WebKit's zoom threshold. This one answers a
+     question about a SURFACE: the box around this control is 64-80px rather
+     than 32-44px, and a 16px label inside a 64px button is not the same design
+     as a 16px label inside a 44px field. The consuming kiosk reached that
+     conclusion on its own and wrote three literals for it — 18px on "Touch to
+     punch", 16px on the six punch actions and on "Next", 20px on the keypad
+     digits — because the scale stopped short of the size it needed. Filed by
+     the audit as "a hole in the type scale between 16px and 25px".
+
+     18, AND FROM THAT SCREEN RATHER THAN FROM THE SCALE'S GEOMETRY. The hole
+     has a midpoint near 21, and a value chosen that way is a value nothing on
+     the screen ever asked for. 18px is what the hero control has been asking
+     for since before it stopped getting it, so a control moved onto this tier
+     renders at the size its author wrote — and a fix for a regression does not
+     get to redesign the screen it is fixing under cover of fixing it.
+
+     WIDTH IS NOT THE CONSTRAINT, AND WAS CHECKED, because "the label still
+     fits" is the reason people assume a type size is safe. Measured in the real
+     faces at 1024x768: the longest punch label, "Start break" at weight 500, is
+     97.4px inside the tightest box on that screen — a 222px action-grid cell —
+     and every size from 16 to 24 fits it. So the constraint here is legibility
+     and proportion, which is why the number comes from the screen rather than
+     from a fit test.
+
+     THE KEYPAD'S 20px IS NOT THIS TOKEN AND MUST NOT BECOME IT. That is one
+     glyph in the display face — a numeral, not a word — and it is set at the
+     call site with `font-display` for the same reason. This tier is control
+     LABELS; a digit that wants to be a readout has the glance tier below.
+
+     STILL ORDINARY TEXT FOR CONTRAST. 18px at the Button's 600 weight is under
+     WCAG's large-text threshold (24px, or 18.66px at 700), so nothing here
+     relaxes a contrast floor: the primary label is scored at 4.5:1 exactly as
+     it is at 13px. Growing type is not a way to buy a lower ratio. */
+  --font-size-kiosk: 18px;
   /* The ribbon's own headline.
      NOT the same as --font-size-h1 (20px), and this is the one place where two
      tokens genuinely deserve to exist for one HTML element. The ribbon is a
@@ -693,6 +760,18 @@
      and a shift-change display, each want one value large enough to read from
      the doorway and one line of text beside it. Both are read-only, which is
      also why there is no third token here for a button label — see below.
+
+     THAT LAST CLAUSE WAS RIGHT ABOUT THE FAMILY AND WRONG ABOUT THE NEED, and
+     1.10.0 proved it the hard way. "See below" meant the control tier: a button
+     label is a control's text, so --font-size-control was its home and the
+     coarse-pointer block was how it grew. Then 1.10.0 pointed Button at
+     --font-size-control and thereby killed every `text-[Npx]` a caller had put
+     on one — the kiosk's own 18px included — and the control tier turned out to
+     top out at 16px, which is a form field's size and not a wall tablet's. The
+     third token exists now and it is still NOT here: --font-size-kiosk sits
+     with --font-size-control, because a label you press belongs to the family
+     of things you press. `glance` remains read-only type, which is the
+     distinction this section was actually defending.
 
      FONT-SIZE ONLY, like the 1.7.0 set, and here the evidence is unusually
      direct rather than inherited: the two literals being named carry DIFFERENT
@@ -1143,12 +1222,107 @@
    to match them. The column header takes `py-2` and does not move; no E911 app
    names the token. What it does cost is length — a 200-row queue is 2400px
    taller on a tablet — which is what touch density means. The alternative is
-   the 4px above. */
+   the 4px above.
+
+   ---------------------------------------------------------------------------
+   WHAT IS DELIBERATELY NOT IN THIS BLOCK: THE KIOSK TIER (1.11.0).
+   --kiosk-target and --font-size-kiosk do not move here. A reader who expects
+   them to is reading the block correctly and should read this before adding
+   them, because the omission looks like an oversight and is not.
+
+   NEITHER REASON THIS BLOCK EXISTS REACHES THEM. The 16px floor above is
+   WebKit's zoom threshold, and 18px clears it at both pointer types. The 44px
+   floor is cleared by 20px at both. A media query that raises a value already
+   past the threshold it was written for buys nothing and costs every later
+   reader an explanation.
+
+   AND THE QUERY ASKS A WEAKER QUESTION THAN THE TIER HAS ALREADY ANSWERED.
+   `pointer: coarse` INFERS that the primary input is a finger. `size="kiosk"`
+   is a consumer stating outright that this control is on a wall-mounted,
+   distance-read, gloved-hand surface. There is nothing left to infer, and the
+   two can only disagree.
+
+   THE POSITIVE REASON, which is the one that decided it: a kiosk is developed
+   and reviewed on a desk machine. Every screenshot of that screen, every
+   browser check at default settings, every reviewer opening it in a window
+   happens at `pointer: fine`. A tier that shrank there would be a tier nobody
+   could verify from a chair — which is the exact shape of the regression it was
+   minted to fix, where "Touch to punch" rendered 13px on the desk, 16px on the
+   tablet, and the 18px it asked for on neither. Pointer-invariant means what a
+   reviewer sees is what a dispatcher gets. */
 @media (pointer: coarse) {
   :root {
     --font-size-control: 16px;
     --control-height: 44px;
     --control-height-sm: 36px;
     --row-height: 52px;
+  }
+}
+
+/* THE DOMAIN EDGE UNDER FORCED COLOURS (Windows High Contrast Mode).
+
+   Forced colours rewrites the used value of every colour property to one of a
+   handful of system colours. Border WIDTHS survive — that is the whole reason
+   CertChip carries its tone as a rule weight — but border COLOURS do not, and
+   the domain edge is a border colour and nothing else. Measured on /now with
+   `emulateMedia({ forcedColors: "active" })`: every card edge `rgb(0, 0, 0)`.
+   One colour. Orange for operations and teal for roster, the one signal this
+   system carries across every E911 app, and under high contrast every card in
+   the PSAP looks identical. A wall tablet is a plausible place for a dispatcher
+   to have switched forced colours on, which is what moves this out of theory.
+
+   WHAT THIS COSTS, because it is a real cost and not a free win.
+   `forced-color-adjust: none` opts an element out of the user's OWN colour
+   choices. Someone using forced colours needs those specific colours; overriding
+   them is the kind of thing that should have to be argued for. The argument
+   here is that the opt-out is 4px tall, spans no text, conveys no state, and
+   carries information that is otherwise entirely lost. Text or a fill would not
+   clear that bar and must never be given this treatment — a StatusTag under
+   forced colours loses its fill and keeps its dot and its word, which is the
+   system working, not a second thing to fix.
+
+   WHY A PSEUDO-ELEMENT AND NOT THE BORDER. `forced-color-adjust` is all-or-
+   nothing per element AND INHERITED, so putting it on the <section> would opt
+   the whole card out — background, every label, every number — and then each of
+   those would have to be re-stated in system colours by hand, in a list that
+   goes stale the moment a component is added. A pseudo-element opts out one box
+   that has no descendants to inherit it.
+
+   WHY THE BORDER IS TRADED FOR PADDING RATHER THAN LEFT UNDERNEATH. The card is
+   `overflow: hidden`, whose clip edge is the PADDING box, so a stripe pulled up
+   over the border at `top: -4px` is clipped away entirely. Left in place the
+   border would still paint its forced black above the stripe and the edge would
+   read 8px in high contrast and 4px everywhere else. Collapsing the border and
+   giving the box the same 4px of padding keeps every child in exactly the
+   position it already had.
+
+   The hue arrives as a custom property because a custom property is the one
+   thing forced colours does not rewrite — it substitutes into `background`
+   after the mode has had its say. `.e911-card-edge-<hue>` is set by DomainCard
+   from the same `edge` prop as the border utility; the fallback keeps a card
+   whose hue class has no rule here painting the system colour it paints today,
+   rather than nothing at all. */
+@media (forced-colors: active) {
+  .e911-app .e911-card-edge-orange { --e911-card-edge-hue: var(--e911-edge-orange); }
+  .e911-app .e911-card-edge-teal   { --e911-card-edge-hue: var(--e911-edge-teal); }
+  .e911-app .e911-card-edge-gold   { --e911-card-edge-hue: var(--e911-edge-gold); }
+  .e911-app .e911-card-edge-green  { --e911-card-edge-hue: var(--e911-edge-green); }
+  .e911-app .e911-card-edge-plum   { --e911-card-edge-hue: var(--e911-edge-plum); }
+  .e911-app .e911-card-edge-blue   { --e911-card-edge-hue: var(--e911-edge-blue); }
+  .e911-app .e911-card-edge {
+    border-top-width: 0;
+    padding-top: var(--card-edge-width);
+  }
+  .e911-app .e911-card-edge::before {
+    content: "";
+    /* DomainCard's own `relative` is what this resolves against — it is there
+       for a different reason (see the note in data.tsx) and this now depends on
+       it too. */
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--card-edge-width);
+    background: var(--e911-card-edge-hue, CanvasText);
+    forced-color-adjust: none;
+    pointer-events: none;
   }
 }

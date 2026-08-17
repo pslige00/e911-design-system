@@ -24,6 +24,218 @@ const headingTag = {
   6: "h6",
 } as const;
 
+/* ------------------------------------------------- dev-only clip detection */
+// Typed locally because this package ships no @types/node — see tsconfig. The
+// declaration is module-scoped, so it shadows nothing in a consumer that has
+// them, and it is erased before any bundler sees the file.
+declare const process: { env: { NODE_ENV?: string } };
+
+/**
+ * How far content may stick out before this is called a clip, in CSS px.
+ *
+ * Agreed with the consuming team from measurements, not chosen: 1px deltas are
+ * pure sub-pixel rounding on fractional grid tracks and occur all over a
+ * healthy page. A warning that fires on those gets muted within a day, and then
+ * the 42px one is muted with it. The floor is the price of being believed —
+ * and it does mean a genuine but tiny clip (they measured one at 133 against
+ * 130) passes unremarked. That is the deliberate half of the trade.
+ */
+const CLIP_FLOOR = 4;
+
+/**
+ * WHY A CARD THAT CLIPS ITS OWN CONTENT HAS TO SAY SO.
+ *
+ * `DomainCard` is `overflow-hidden` and has to be — a flush table would
+ * otherwise square off the card's own rounded corners. The cost is that content
+ * wider than the card is CUT OFF IN SILENCE: no scrollbar, no overflow, nothing
+ * on screen, and no automated check either repo runs can see it. The first
+ * consuming app lost a `StatusTag` that way — "Paid"/"Unpaid" off the end of
+ * every row on /balances at 320px, which is status conveyed by a pill that is
+ * not on screen, at the exact width WCAG 1.4.10 names. An AA failure with no
+ * symptom.
+ *
+ * `DataTable` already `console.error`s when `ctx.rowLink` is called twice, on
+ * the grounds that it is always a defect and the type system cannot express it.
+ * Same argument, and it is the reason this is a runtime warning rather than a
+ * lint rule: no prop is wrong and no type is violated, the RENDER is wrong.
+ *
+ * WHY IT OBSERVES THE CHILDREN RATHER THAN THE CARD, which is the thing most
+ * likely to be got wrong by someone rewriting this: **a `ResizeObserver` on the
+ * card only fires when the CARD resizes.** The reported case was text reflowing
+ * inside a card whose own box never changed size — a name arriving from the
+ * server longer than the seed's — so a card-level observer is blind to exactly
+ * the case this exists for. One observer takes many targets, and a
+ * `MutationObserver` picks up children that arrive later. Border-box, not
+ * content-box: a child that grows by padding or border keeps its content box
+ * and would not fire otherwise.
+ *
+ * WHAT IT DELIBERATELY STAYS QUIET ABOUT, all measured rather than guessed:
+ *
+ * - **The `flush` variant.** There the clipping is usually a child's, and that
+ *   child owns a considered scroller (`DataTable`'s). Naming the card would
+ *   send the reader to the wrong file, and silence beats misdirection.
+ * - **Anything inside a nested scroller.** /balances holds a 1655px ledger
+ *   inside a 286px card on purpose; it is wider than the box AND reachable.
+ *   The walk stops at the first scrollable — or self-clipping — descendant, so
+ *   this does not fire on every `DataTable` in the app.
+ * - **Absolutely- and fixed-positioned descendants.** Decorative bleed is
+ *   deliberate: the Ribbon's circle hangs outside its box by design, and
+ *   `.sr-only` is `position: absolute` and one pixel wide.
+ * - **The card's own padding.** The clip edge is the PADDING box, not the body's
+ *   content box; content spilling into the card's own 16px is not clipped and
+ *   is not a defect.
+ */
+function useClipWarningDev(flush: boolean) {
+  // A callback ref rather than useRef, for the same reason DataTable uses one:
+  // the observer follows the DOM node instead of a dependency list.
+  const [card, setCard] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    if (flush || !card) return;
+    // Guarded because consumers render this component under jsdom, where
+    // neither constructor exists and an unguarded `new` is a ReferenceError
+    // that takes the whole test file with it.
+    if (typeof ResizeObserver === "undefined" || typeof MutationObserver === "undefined") return;
+
+    let targets: Element[] = [];
+    let frame = 0;
+    // The last message printed, so a card inside a screen that re-renders on a
+    // one-second tick reports its clip once rather than sixty times a minute.
+    let last = "";
+
+    /** Every descendant whose overflow is THIS card's to answer for. */
+    const collect = (root: Element): Element[] => {
+      const out: Element[] = [];
+      const walk = (el: Element) => {
+        for (const kid of el.children) {
+          const s = getComputedStyle(kid);
+          if (s.position === "absolute" || s.position === "fixed") continue;
+          out.push(kid);
+          // Stop, but only after counting the element itself: a box that
+          // scrolls or clips on its own account keeps its children off the
+          // card's edge, so walking into it can only produce a culprit that is
+          // not in fact being clipped by the card.
+          const ox = s.overflowX;
+          if (ox !== "visible") continue;
+          walk(kid);
+        }
+      };
+      walk(root);
+      return out;
+    };
+
+    const describe = (el: Element) => {
+      const cls = el.getAttribute("class") ?? "";
+      const shown = cls.length > 90 ? `${cls.slice(0, 90)}…` : cls;
+      return `<${el.tagName.toLowerCase()}${shown ? ` class="${shown}"` : ""}>`;
+    };
+
+    const check = () => {
+      const rect = card.getBoundingClientRect();
+      const cs = getComputedStyle(card);
+      const left = rect.left + parseFloat(cs.borderLeftWidth);
+      const right = rect.right - parseFloat(cs.borderRightWidth);
+      let worst: Element | null = null;
+      let by = 0;
+      let count = 0;
+      for (const el of targets) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) continue; // display:none, or detached
+        const over = Math.max(r.right - right, left - r.left);
+        if (over < CLIP_FLOOR) continue;
+        count += 1;
+        if (over > by) {
+          by = over;
+          worst = el;
+        }
+      }
+      // Nothing NAMEABLE is being clipped. Staying quiet is deliberate even
+      // when the card's own scrollWidth says otherwise — a warning that cannot
+      // point at the offender sends the reader hunting through the wrong file.
+      if (!worst) {
+        last = "";
+        return;
+      }
+      const heading = card.querySelector(":scope > div > :is(h2,h3,h4,h5,h6)")?.textContent?.trim();
+      const name = heading || card.textContent?.trim().slice(0, 40);
+      const msg =
+        `[e911] DomainCard${name ? ` "${name}"` : ""} is clipping its own content: ` +
+        `${Math.round(by)}px of it is cut off. The card is overflow-hidden, so there is no ` +
+        `scrollbar and nothing on screen to say anything is missing.\n` +
+        `  cut off: ${describe(worst)}\n` +
+        (worst.parentElement && worst.parentElement !== card
+          ? `  inside:  ${describe(worst.parentElement)}\n`
+          : "") +
+        (count > 1 ? `  (and ${count - 1} more)\n` : "") +
+        `  Most likely a flex item with a width but no \`min-w-0\`. A width on a flex item is a ` +
+        `basis, not a floor: flex-shrink still defaults to 1, so the item gives that width back ` +
+        `under pressure until it hits its own min-content, and the row runs off the end. ` +
+        `Wrapping the row does NOT fix this on its own — a nested flex container will not shrink ` +
+        `below its own content without \`min-w-0\` either, and it stays clipped by the same amount.`;
+      if (msg === last) return;
+      last = msg;
+      console.error(msg);
+    };
+
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        check();
+      });
+    };
+
+    const ro = new ResizeObserver(schedule);
+    const retarget = () => {
+      // Disconnect first so removed children are not observed forever. The
+      // re-observe fires an initial callback per target, which schedules one
+      // more check — and `check` mutates nothing, so there is no loop.
+      ro.disconnect();
+      targets = collect(card);
+      ro.observe(card, { box: "border-box" });
+      for (const t of targets) ro.observe(t, { box: "border-box" });
+    };
+    // No `attributes`: an attribute that changes a child's size already fires
+    // the ResizeObserver above, and watching them adds a callback per class
+    // toggle on screens that toggle classes every second.
+    const mo = new MutationObserver(() => {
+      retarget();
+      schedule();
+    });
+    retarget();
+    schedule();
+    mo.observe(card, { childList: true, subtree: true, characterData: true });
+    return () => {
+      mo.disconnect();
+      ro.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [card, flush]);
+  return setCard;
+}
+
+/**
+ * Chosen once, at module scope, so production calls no hooks at all rather than
+ * calling them and returning early — the branch is constant for the lifetime of
+ * the module, which is the condition the rules of hooks actually require.
+ *
+ * TWO THINGS ABOUT THIS LINE ARE LOAD-BEARING, both measured against esbuild
+ * with the app's own `--define`:
+ *
+ * `process.env.NODE_ENV` is written out in full rather than read from a `DEV`
+ * const above. Every bundler in this ecosystem replaces that exact member
+ * expression with a literal, so this folds to `() => undefined` and everything
+ * above becomes unreachable and is dropped. Through a named const it folds just
+ * the same but the dev path SURVIVES tree-shaking — 2KB of observer code that
+ * ships to a PSAP and can never run. A `typeof process` guard or optional
+ * chaining is worse still: neither matches the replacement, so a real `process`
+ * lookup reaches the browser.
+ *
+ * And the fallback is `() => undefined`, not `undefined`, because DomainCard
+ * calls it unconditionally.
+ */
+const useClipWarning: (flush: boolean) => ((el: HTMLElement | null) => void) | undefined =
+  process.env.NODE_ENV !== "production" ? useClipWarningDev : () => undefined;
+
 /* ------------------------------------------------------------- DomainCard */
 export interface DomainCardProps
   extends Omit<React.HTMLAttributes<HTMLElement>, "title"> {
@@ -81,8 +293,12 @@ export function DomainCard({
   const reactId = React.useId();
   const titleId = `${reactId}-title`;
   const { "aria-labelledby": ariaLabelledBy, "aria-label": ariaLabel, ...sectionRest } = rest;
+  const clipRef = useClipWarning(flush);
   return (
     <section
+      // `undefined` in production — see useClipWarning. Nothing can collide
+      // with it: `ref` is not in DomainCardProps, so no consumer can pass one.
+      ref={clipRef}
       // An app-supplied name wins: a card titled "Open" on a page of them may
       // need to say which queue it belongs to.
       aria-labelledby={ariaLabelledBy ?? (title != null && !ariaLabel ? titleId : undefined)}
@@ -112,6 +328,18 @@ export function DomainCard({
         "min-w-0 overflow-hidden rounded-md border border-line bg-card shadow-card",
         "border-t-edge", // 4px top border width
         edgeClass[edge],
+        // NOT a style — a SELECTOR for tokens.css, on the same terms as
+        // `e911-card-flush` below. Under `forced-colors: active` the browser
+        // rewrites `border-top-color` to a system colour, so all six domain
+        // hues render as one and the cross-app identity signal is simply gone:
+        // measured on /now, every edge `rgb(0, 0, 0)`. The edge is a border,
+        // and a border has no selector of its own, so tokens.css cannot reach
+        // it to opt it out — hence a class, and a second one carrying which
+        // hue, because a custom property is the one thing forced colours do not
+        // rewrite. Nothing here paints; see the forced-colours block in
+        // tokens.css for what does, and for why the opt-out is 4px tall.
+        "e911-card-edge",
+        `e911-card-edge-${edge}`,
         // Not a style — a SIGNAL to tokens.css that this box clips its
         // children, so every focusable inside must draw its indicator inward
         // instead of outward (1.8.0). The global indicator reaches 7px outside
