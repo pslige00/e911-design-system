@@ -24,6 +24,19 @@ interface ToastRecord extends ToastOptions {
   id: string;
 }
 
+/**
+ * One toast's text, as the screen reader gets it. `key` is the provider's
+ * sequence number and is load-bearing: React reuses a child whose key has not
+ * changed, so the same message twice in a row ("Failed", "Failed") would be no
+ * DOM mutation at all and the second one would pass in silence. A new key
+ * replaces the node, which is a change inside the live region and announces.
+ */
+interface Announcement {
+  key: number;
+  word: string;
+  message: React.ReactNode;
+}
+
 interface ToastApi {
   /** Returns the id so a long-running task can dismiss its own toast. */
   toast: (options: ToastOptions) => string;
@@ -62,6 +75,10 @@ export interface ToastProviderProps {
  */
 export function ToastProvider({ children, max = 4 }: ToastProviderProps) {
   const [toasts, setToasts] = React.useState<ToastRecord[]>([]);
+  /* Two slots, not one, so a routine "Saved" landing a second after a failure
+     does not blank the assertive region before the reader has finished it. */
+  const [polite, setPolite] = React.useState<Announcement | null>(null);
+  const [assertive, setAssertive] = React.useState<Announcement | null>(null);
   const seq = React.useRef(0);
 
   const dismiss = React.useCallback((id: string) => {
@@ -73,6 +90,17 @@ export function ToastProvider({ children, max = 4 }: ToastProviderProps) {
       seq.current += 1;
       const id = `toast-${seq.current}`;
       setToasts((list) => [...list, { ...options, id }].slice(-max));
+      // `bad` is an interruption — a failed dispatch write can't wait for the
+      // reader to finish the current phrase. Every other tone is polite, and
+      // the test is deliberately `=== "bad"` rather than a per-tone map: `Tone`
+      // widened to five in 1.7.0, and a map would have been the thing that
+      // needed editing (or, more likely, didn't) when `info` and `neutral`
+      // arrived. Written this way a sixth tone announces politely by default —
+      // the safe end of the choice. An assertive region on a routine "Saved"
+      // cuts off whatever the operator was already being read.
+      const announcement = { key: seq.current, word: options.word, message: options.message };
+      if (options.tone === "bad") setAssertive(announcement);
+      else setPolite(announcement);
       return id;
     },
     [max]
@@ -91,6 +119,33 @@ export function ToastProvider({ children, max = 4 }: ToastProviderProps) {
           "flex-col gap-2"
         )}
       >
+        {/* BOTH REGIONS ARE MOUNTED FROM FIRST RENDER AND STAY EMPTY until
+            there is something to say. This is the whole point of them: a live
+            region that appears at the same instant it gains its text is not
+            reliably announced — NVDA and JAWS announce a change of content
+            inside a region that was ALREADY THERE. The role used to live on the
+            card, which is created already populated, so four of the five tones
+            were a coin toss. (TimeSweep learned this in
+            src/app/(app)/now/board-refresh.tsx and the system's own toast went
+            on doing the thing that app had fixed.)
+
+            They are also OUTSIDE the card on purpose: the card is torn down when
+            the toast expires, and a region that is removed and rebuilt per
+            message is the same defect wearing a different hat. */}
+        <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+          {polite ? (
+            <p key={polite.key}>
+              {polite.word}. {polite.message}
+            </p>
+          ) : null}
+        </div>
+        <div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
+          {assertive ? (
+            <p key={assertive.key}>
+              {assertive.word}. {assertive.message}
+            </p>
+          ) : null}
+        </div>
         {toasts.map((t) => (
           <ToastCard key={t.id} record={t} onDismiss={() => dismiss(t.id)} />
         ))}
@@ -122,16 +177,9 @@ function ToastCard({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
 
   return (
     <div
-      // `bad` is an interruption — a failed dispatch write can't wait for the
-      // screen reader to finish the current phrase. Every other tone is polite,
-      // and the test is deliberately `=== "bad"` rather than a per-tone map:
-      // `Tone` widened to five in 1.7.0, and a map would have been the thing
-      // that needed editing (or, more likely, didn't) when `info` and `neutral`
-      // arrived. Written this way, a sixth tone announces politely by default —
-      // the safe end of the choice. An assertive live region on a routine
-      // "Saved" cuts off whatever the operator was already being read.
-      role={record.tone === "bad" ? "alert" : "status"}
-      aria-atomic="true"
+      // No live-region role here any more; it moved to the two permanent
+      // regions in ToastProvider, which is the only arrangement that is
+      // actually announced. See the comment there before putting one back.
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -143,8 +191,18 @@ function ToastCard({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <StatusTag tone={record.tone}>{record.word}</StatusTag>
-          <p className="mt-1.5 text-ribbon-meta text-ink">{record.message}</p>
+          {/* The word and the message are hidden from assistive tech HERE, and
+              only here: the live region above has already said both, and a
+              reader browsing the page should not meet them a second time.
+              Scoped to the text rather than put on the card — an aria-hidden
+              card would take the Undo and Dismiss buttons out of the
+              accessibility tree with it, which is both an axe
+              `aria-hidden-focus` violation and a toast a blind operator cannot
+              dismiss or undo. */}
+          <div aria-hidden="true">
+            <StatusTag tone={record.tone}>{record.word}</StatusTag>
+            <p className="mt-1.5 text-ribbon-meta text-ink">{record.message}</p>
+          </div>
           {record.action ? (
             <button
               type="button"

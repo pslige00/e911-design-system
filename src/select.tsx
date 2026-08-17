@@ -166,6 +166,16 @@ export interface SelectProps<T extends string = string> {
   "aria-label"?: string;
   "aria-labelledby"?: string;
   "aria-describedby"?: string;
+  /**
+   * DECLARED, not incidental. `FormField` marks an errored control by putting
+   * `aria-invalid` in the props object it hands its child, and until 1.10.0 this
+   * landed here only because the rest spread happened to carry it — undeclared,
+   * so a refactor could have dropped it with nothing to say so. It is read
+   * alongside `invalid`: whichever channel says the control is bad, both the
+   * announcement and the red stroke follow. See the border note below for why
+   * the className channel alone cannot carry this.
+   */
+  "aria-invalid"?: boolean | "true" | "false";
 }
 
 /** Typeahead buffer lifetime — long enough to spell "Battalion", short enough
@@ -192,8 +202,16 @@ export function Select<T extends string = string>({
   invalid = false,
   size = "md",
   className,
+  "aria-invalid": ariaInvalid,
   ...aria
 }: SelectProps<T>) {
+  // ONE boolean drives both the announcement and the paint. They used to be
+  // separate: `invalid` painted the border and a caller's `aria-invalid` (which
+  // is all `FormField` sends) reached only the accessibility tree, so an
+  // errored Select was announced invalid and drawn valid. Two channels
+  // disagreeing about the same fact is worse than either being absent.
+  const showInvalid = invalid || ariaInvalid === true || ariaInvalid === "true";
+
   const [open, setOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
@@ -361,7 +379,7 @@ export function Select<T extends string = string>({
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-activedescendant={open && activeIndex >= 0 ? optionId(activeIndex) : undefined}
-        aria-invalid={invalid || undefined}
+        aria-invalid={showInvalid || undefined}
         onKeyDown={onKeyDown}
         onClick={() => (open ? close(false) : openList(selectedIndex >= 0 ? selectedIndex : firstEnabled()))}
         className={cn(
@@ -439,7 +457,24 @@ export function Select<T extends string = string>({
           size === "md" && "before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']",
           // --border-control (1.5.0): the trigger's stroke is what says "field"
           // on a card of the same colour. See tokens.css.
-          invalid ? "border-bad" : "border-line-control",
+          showInvalid ? "border-bad" : "border-line-control",
+          // The line above states the intent; THIS one is what makes it
+          // survive a caller. `FormField` hands its child a className carrying
+          // its own `border-line-control`, and because `cn` is a plain join
+          // both land in the attribute — where `border-line-control` and
+          // `border-bad` are each (0,1,0) and the SHEET's order decides. It
+          // decides for grey, in both themes (measured), so a supervisor
+          // correcting a punch got a red sentence under a form of grey
+          // controls. Keying the bad stroke off the attribute assistive tech
+          // already reads makes it (0,3,0), which no caller-supplied utility
+          // can tie with, and makes the two channels physically the same fact.
+          //
+          // The `:enabled` half is load-bearing in the other direction: the
+          // disabled utilities above are (0,2,0), so without it an escalated
+          // bad stroke would outrank them and a disabled field would shout
+          // "bad" — a complaint the operator cannot answer, because they
+          // cannot type in the field. Disabled still wins, as before.
+          "enabled:aria-invalid:border-bad",
           selected ? "text-ink" : "text-faint",
           className
         )}
@@ -460,8 +495,14 @@ export function Select<T extends string = string>({
           aria-labelledby={aria["aria-labelledby"]}
           style={layerStyle}
           className={cn(
-            "z-popover overflow-y-auto overscroll-contain rounded-sm border border-line",
-            "bg-card p-1 shadow-pop"
+            // `gap-0.5` (1.10.0): the rows used to be stacked with literally 0px
+            // between them, so a 44px target's miss always landed on a live
+            // neighbour rather than on nothing. Two pixels is not a margin of
+            // safety, but it is a boundary — and it is what makes the
+            // slide-off-and-let-go correction below something an operator can
+            // aim at. Costs 2px per row of popover height and nothing else.
+            "z-popover flex flex-col gap-0.5 overflow-y-auto overscroll-contain",
+            "rounded-sm border border-line bg-card p-1 shadow-pop"
           )}
         >
           {options.length === 0 ? (
@@ -477,10 +518,36 @@ export function Select<T extends string = string>({
                 role="option"
                 aria-selected={isSelected}
                 aria-disabled={option.disabled || undefined}
-                // pointerdown, not click: the trigger keeps DOM focus, and a
-                // click would first fire a blur/focus round-trip through the li.
-                onPointerDown={(e) => {
-                  e.preventDefault();
+                // COMMIT ON THE UP EVENT, never on the down event — WCAG 2.5.2
+                // Pointer Cancellation, Level A. This was `onPointerDown`, and
+                // a real touch sequence proved what that costs: press on
+                // "Premium multiplier on hours worked", slide two rows, lift on
+                // "Banked as compensatory time", and the row under the DOWN
+                // finger was committed. Slide-off-and-let-go is the one
+                // correction every other pointer UI offers, and it is exactly
+                // the motion a tremor and an arm's-length reach at a wall
+                // tablet both produce. These lists set how a holiday is paid,
+                // which shift code applies and which leave kind is filed.
+                //
+                // Chromium fires `click` on the nearest common ancestor of the
+                // down and up targets, so drifting to a neighbour lands the
+                // click on the <ul> and nothing commits at all. That is the
+                // abort; a clean tap still commits the row it lifted on.
+                //
+                // preventDefault on MOUSEDOWN is the half of the old handler
+                // worth keeping, and it is why the swap is safe: focus is set
+                // as the default action of mousedown, so suppressing it keeps
+                // DOM focus on the trigger and there is still no blur/focus
+                // round-trip through this non-focusable li. dialog.tsx already
+                // uses the same mousedown guard for its own drag case.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  // The old pointerdown preventDefault suppressed the click
+                  // outright, so an option press never reached an enclosing
+                  // handler (a DataTable row, a card). Preserve that: the fix
+                  // is about WHEN the option commits, not about what else the
+                  // press is now allowed to trigger.
+                  e.stopPropagation();
                   commit(index);
                 }}
                 onPointerEnter={() => !option.disabled && setActiveIndex(index)}

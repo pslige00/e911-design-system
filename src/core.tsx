@@ -23,11 +23,36 @@ import { cn, type ControlSize, type EdgeColor, type Tone } from "./contract";
  *
  * `tap` is --tap-target, the same 44px floor the rail rows and the calendar
  * cells already use, so a tap-sized form lines up with the shell around it.
+ *
+ * THE PIXELS BELOW ARE THE DESK ONES. As of 1.10.0 --control-height and
+ * --control-height-sm are raised under `@media (pointer: coarse)`, so on a wall
+ * tablet `md` is 44px and `sm` is 36px and `md` and `tap` paint the same box.
+ * That is deliberate — see the block at the end of tokens.css for the argument —
+ * but it means this table is a map of NAMES to tokens, not of names to numbers,
+ * and anyone reading "32px" off it while debugging a tablet screenshot is
+ * reading the wrong device's value. `tap` still exists on a coarse pointer
+ * because it is the size a consumer asks for EXPLICITLY when a control is the
+ * primary finger target on a desk machine too — a kiosk on a touchscreen PC.
  */
 export const CONTROL_HEIGHT: Record<ControlSize, string> = {
   sm: "h-ctl-sm",
   md: "h-ctl",
   tap: "h-tap",
+};
+
+/**
+ * The same three heights as a FLOOR rather than a fixed box, for the one case
+ * that has to be able to grow: a button whose label wraps (see `wrap` below).
+ *
+ * Not a general-purpose alternative to CONTROL_HEIGHT. Every other control in
+ * the system holds a single line by construction — an input, a Select trigger,
+ * a calendar cell — and a fixed height is what keeps a row of them on one
+ * baseline. Only a Button gets handed arbitrary prose by a consumer.
+ */
+const CONTROL_MIN_HEIGHT: Record<ControlSize, string> = {
+  sm: "min-h-ctl-sm",
+  md: "min-h-ctl",
+  tap: "min-h-tap",
 };
 
 /* ------------------------------------------------------------- focus util */
@@ -62,6 +87,27 @@ export interface ButtonProps
    * now. See ControlSize.
    */
   size?: ControlSize;
+  /**
+   * Let a long label wrap onto a second line instead of pushing the page
+   * sideways. Defaults to `true` at `tap` and `false` at `sm`/`md`.
+   *
+   * THIS PROP EXISTS BECAUSE THE CLASSNAME ESCAPE HATCH DOES NOT WORK HERE, and
+   * that is not obvious from the outside. `whitespace-nowrap` is in this
+   * component's own class string, and a caller passing `whitespace-normal`,
+   * `text-wrap`, `whitespace-pre-line` or even the arbitrary
+   * `[white-space:normal]` loses every time — all of them are core-tier
+   * utilities and `nowrap` sorts later, so the button stays on one line and
+   * overflows its column with no warning. Measured at 332.8px in a 180px column
+   * on a 41-character label: 152.8px of overflow, unfixable from the call site.
+   *
+   * `tap` defaults to wrapping because that size exists for phones, kiosks and
+   * wall tablets, which is where a column narrow enough to matter actually
+   * occurs; a single-line label is unaffected, since the min-height and the old
+   * fixed height are the same 44px. `sm`/`md` keep nowrap because a desk-density
+   * button that silently grows to two lines breaks the row it sits in — there
+   * the consumer knows the label and asks for wrapping deliberately.
+   */
+  wrap?: boolean;
 }
 
 const buttonVariant: Record<ButtonVariant, string> = {
@@ -104,18 +150,44 @@ const buttonDisabled =
   "disabled:hover:text-disabled-fg disabled:hover:brightness-100";
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = "primary", size = "md", className, type, ...rest }, ref) => (
+  ({ variant = "primary", size = "md", wrap = size === "tap", className, type, ...rest }, ref) => (
     <button
       ref={ref}
       type={type ?? "button"}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
-        "rounded-sm text-body transition duration-fast ease-e911",
+        "inline-flex items-center justify-center gap-1.5",
+        "rounded-sm transition duration-fast ease-e911",
         buttonDisabled,
-        CONTROL_HEIGHT[size],
-        // Padding follows the height so the label keeps its optical margins;
-        // only `sm` also steps the type down, which it did before 1.5.0 too.
-        size === "sm" ? "px-2.5 text-ui-sm" : size === "tap" ? "px-4" : "px-3.5",
+        // A wrapping button needs all three of these together, and each one is
+        // load-bearing: the min-height so a second line can grow the box (`h-tap`
+        // is a fixed `height` — a wrapped label inside one just overflows it),
+        // `text-center` because `justify-center` centres the line box and not the
+        // lines within it, and `py-1` so a two-line label is not flush against
+        // the border once the min-height stops being the binding constraint.
+        wrap
+          ? `${CONTROL_MIN_HEIGHT[size]} whitespace-normal text-center py-1`
+          : `${CONTROL_HEIGHT[size]} whitespace-nowrap`,
+        // Padding follows the height so the label keeps its optical margins,
+        // and only `sm` also steps the type down, which it did before 1.5.0 too
+        // — it stays on `text-ui-sm`, the small-UI tier, which deliberately does
+        // not move on a touch device either. See the end of tokens.css.
+        //
+        // text-control, NOT text-body (1.10.0). A Button's label is text inside a
+        // control, and --font-size-control is the token for that — which is also
+        // the one token that rises to 16px under `@media (pointer: coarse)`. On
+        // `text-body` the Button was the one member of the control family the
+        // touch bump could not reach: measured on a wall tablet, a Select
+        // trigger rendered at 16px and the Button beside it at 13.5px, and
+        // "Clock in" — the most-pressed control in the building — carried a
+        // 13.5px label at arm's length in a dark room. Desk machines lose 0.5px
+        // on a button label and gain a control family that agrees.
+        //
+        // Written into the size branch rather than sitting in the base string
+        // beside `text-ui-sm`, because two font-size utilities on one element is
+        // decided by Tailwind's emit order, not by ours. `text-ui-sm` happens to
+        // sort after `text-control` today; a theme-key rename would flip it and
+        // nothing would fail. Exactly one font size per branch, always.
+        size === "sm" ? "px-2.5 text-ui-sm" : size === "tap" ? "px-4 text-control" : "px-3.5 text-control",
         buttonVariant[variant],
         className
       )}
@@ -213,6 +285,15 @@ export interface CertChipProps extends React.HTMLAttributes<HTMLSpanElement> {
   // component in the system whose tone means something narrower than Tone.
   tone?: Tone;
   children: React.ReactNode; // e.g. "EMD", "CPR 21d"
+  /**
+   * The word the tone adds to what a screen reader reads out, since the chip's
+   * own text is a code and says nothing about why it is toned. Defaults to the
+   * severity word below; pass the specific one where the app knows it
+   * ("expired", "adjustment", "superseded"), and pass "" where the visible code
+   * already says it — `<CertChip tone="bad">TDD expired</CertChip>` does not
+   * need to announce "TDD expired, critical".
+   */
+  toneLabel?: string;
 }
 
 /**
@@ -222,17 +303,59 @@ export interface CertChipProps extends React.HTMLAttributes<HTMLSpanElement> {
  * because a certification that is simply current does not need to compete with
  * the one expiring in 21 days sitting next to it. Fill every tone and the row
  * goes back to being uniformly loud, which is what the outline is protecting.
+ *
+ * THE LEFT RULE IS NOT DECORATION — IT IS THE NON-COLOUR HALF (1.10.0, WCAG
+ * 1.4.1 Level A). Until it existed the sentence above was also an admission:
+ * hue was the ONLY carrier, and hue is the channel that goes first. Simulating
+ * deuteranopia on the real token values, the warn and bad borders converge from
+ * ΔRGB 84 to 21 in dark and to 36 in light; the light-theme soft fills are
+ * already within Δ13 of each other with normal colour vision, so the fill was
+ * carrying almost nothing there even before that. `<CertChip tone="warn">ADJ` on
+ * /reports was indistinguishable from an untoned sibling for roughly one man in
+ * twelve on the floor.
+ *
+ * The rule's WEIGHT is the ramp — nothing, 4px, 8px — because thickness is the
+ * one difference that still reads at arm's length on a dimmed wall tablet,
+ * where a dash pattern or a 2px step does not. `bad` splits its rule in two
+ * rather than growing a third time: 16px of bar on a 20px chip would be a
+ * fill, and "no longer valid" is a different KIND of thing from "louder", not
+ * more of it. The style is set per-side deliberately — `border-double` would
+ * take the other three edges with it, and `double` under 3px renders as solid
+ * in Chromium and as engine's-choice everywhere else, so the outline would be
+ * quietly at the mercy of the browser.
+ *
+ * Widths survive what colour does not: a greyscale wall tablet, a photocopy,
+ * and `forced-colors: active`, which overrides every hue on this element to a
+ * system colour and leaves border-width alone.
  */
 const certTone: Record<Tone, string> = {
   neutral: "border-line text-muted",
   ok: "border-line text-muted",
-  warn: "border-warn bg-warn-soft text-warn",
-  bad: "border-bad bg-bad-soft text-bad",
-  info: "border-info bg-info-soft text-info",
+  warn: "border-warn bg-warn-soft text-warn border-l-8",
+  bad: "border-bad bg-bad-soft text-bad border-l-8 [border-left-style:double]",
+  info: "border-info bg-info-soft text-info border-l-4",
+};
+
+/**
+ * The severity word each tone contributes to the announced text. `null` for the
+ * two tones that paint no rule and no fill: they say "routine", and announcing
+ * "routine" on every badge number in a table is noise, not access.
+ *
+ * These are the generic words on purpose. The component knows the tone and only
+ * the tone — whether `warn` on this chip means "expiring", "adjusted" or
+ * "provisional" is the app's knowledge, which is what `toneLabel` is for.
+ */
+const certToneLabel: Record<Tone, string | null> = {
+  neutral: null,
+  ok: null,
+  warn: "warning",
+  bad: "critical",
+  info: "note",
 };
 
 /** Mono chip for certification codes / IDs. */
-export function CertChip({ tone = "neutral", children, className, ...rest }: CertChipProps) {
+export function CertChip({ tone = "neutral", toneLabel, children, className, ...rest }: CertChipProps) {
+  const spoken = toneLabel ?? certToneLabel[tone];
   return (
     <span
       className={cn(
@@ -259,6 +382,15 @@ export function CertChip({ tone = "neutral", children, className, ...rest }: Cer
       {...rest}
     >
       {children}
+      {/* The other half of 1.4.1, and the half nothing else in this component
+          can cover: the left rule is a visual carrier, and a screen reader
+          reads no borders. Rendered as text inside the chip rather than as
+          `title` or `aria-description` because this span has no role, so it has
+          no accessible NAME to hang either of those on — the only thing a
+          screen reader will ever say about it is its text content. A leading
+          comma, because "EMD 21d warning" is one phrase and "EMD 21d, warning"
+          is two. */}
+      {spoken ? <span className="sr-only">{`, ${spoken}`}</span> : null}
     </span>
   );
 }

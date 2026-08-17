@@ -61,8 +61,30 @@ export interface AppShellProps {
    */
   footerItems?: RailItem[];
   /** Footer slot for controls that are not destinations — theme, avatar. Use
-   *  <RailAction> inside it so they inherit the rail's alignment and labels. */
+   *  <RailAction> inside it so they inherit the rail's alignment and labels.
+   *  The control that ENDS THE SESSION does not go here — see
+   *  `railSessionAction`, and why it is a slot of its own. */
   railFooter?: React.ReactNode;
+  /**
+   * The one control that ends the session — sign out, in every current E911
+   * app. Rendered below a divider and a doubled gap, apart from the preference
+   * toggles in `railFooter`.
+   *
+   * WHY A SLOT AND NOT JUST "PUT IT LAST": measured on a wall tablet, sign-out
+   * sat 6px below the theme toggle, because the whole rail is on a 50px pitch
+   * and every neighbouring pair is 6px apart. The theme toggle is the control a
+   * dispatcher reaches for IN A DARK ROOM — the same condition under which they
+   * can least see what they are aiming at — and one finger-width of tremor ends
+   * the shift's session. The shell cannot tell a preference from an exit on its
+   * own: both arrive as opaque children, so a rule like "separate the last one"
+   * or "separate the one that submits a form" would put the divider in the
+   * wrong place the first time an app ordered its footer differently, and
+   * nothing would catch it. Naming it is the only version that cannot be wrong.
+   *
+   * Deliberately NOT a confirmation step: sign-out destroys no data, and a
+   * confirm on every sign-out is a cost paid on every shift change.
+   */
+  railSessionAction?: React.ReactNode;
   /**
    * `id` of the <main> the skip link jumps to. It is a prop rather than a
    * constant because an app may already have the id wired into a router or an
@@ -212,6 +234,7 @@ export function AppShell({
   renderLink,
   footerItems,
   railFooter,
+  railSessionAction,
   mainId = "main-content",
   skipLinkLabel = "Skip to main content",
   skipLink = true,
@@ -288,34 +311,109 @@ export function AppShell({
     if (drawerOpen) navRef.current?.focus();
   }, [drawerOpen]);
 
-  /* CLOSE IT WHEN THE VIEWPORT CROSSES BACK ABOVE `md`, and this one is not
-     cosmetic. Every other part of the drawer is scoped in CSS by `max-md:`, so
-     crossing the breakpoint fixes itself — but `inert` on <main> is React state
-     and cannot be. Leave it and a drawer opened below 768px keeps <main> inert
-     after the viewport grows: the rail is a normal column again, the drawer is
-     gone, and the entire page is unfocusable and invisible to a screen reader
-     with nothing on screen explaining why and no control left to undo it.
+  /* ONE READING OF `md`, HELD IN STATE, because two things depend on it now and
+     a second reading is a second thing to keep in step. Everything else about
+     the drawer is scoped in CSS by `max-md:` and therefore fixes itself when
+     the viewport crosses; these two cannot be, because they are React state:
 
-     A tablet rotating from portrait to landscape is exactly this, and 768px is
-     the width a portrait tablet sits at — the likeliest device in this app's
-     estate to cross the line with the drawer open, not a contrived case.
+      · closing the drawer on the way UP past `md` (below). Leave it and a
+        drawer opened at 700px keeps <main> inert after the viewport grows: the
+        rail is a normal column again, the drawer is gone, and the whole page is
+        unfocusable and invisible to a screen reader with nothing on screen
+        explaining why and no control left to undo it. A tablet rotating from
+        portrait to landscape is exactly this, and 768px is the width a portrait
+        tablet sits at.
+      · `navInert` (below), which must be OFF above `md` — a rail that is inert
+        while it is the app's only visible navigation is the same accident in
+        the other direction.
 
      matchMedia rather than a resize handler: it fires on the transition itself
      rather than on every intermediate pixel. The literal 48rem must stay in
      step with Tailwind's `md`; there is no way to read a breakpoint back out of
-     a utility, which is the one thing here that could silently drift. */
+     a utility, which is the one thing here that could silently drift.
+
+     It starts `true` — desk-machine-shaped — and that default is load-bearing
+     for the server render. The first client render must match the HTML, and the
+     effect below only corrects it after mount: guessing "narrow" would ship
+     every desktop an inert rail for the length of hydration, and permanently if
+     the JS never arrives. Guessing "wide" costs a phone a few hundred ms in
+     which the off-screen panel is still tabbable, which is the bug being fixed
+     rather than a new one. */
+  const [wideViewport, setWideViewport] = React.useState(true);
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 48rem)");
+    const sync = () => setWideViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  React.useEffect(() => {
+    if (wideViewport && drawerOpen) setDrawerOpen(false);
+  }, [wideViewport, drawerOpen]);
+
+  /* THE CLOSED DRAWER HAS TO LEAVE THE TAB ORDER, not merely the screen.
+
+     Below `md` the closed panel is moved out of view by `-translate-x-full` and
+     nothing else: `visibility: visible`, no `aria-hidden`, no `inert`. A
+     transform never removes anything from the focus order, so Chromium keeps
+     all eleven controls sequentially focusable at x=-214. Measured: a keyboard
+     operator Tabs eleven times with no visible focus anywhere on the page, and
+     stop [12] is Sign out — a blind Enter in that run ends the session. WCAG
+     2.4.7 and 2.4.3.
+
+     Not a phone bug, which is what makes it a blocker rather than an edge: 200%
+     browser zoom on a 1280px desk machine puts the LAYOUT viewport at 640px,
+     i.e. below `md`, and 400% puts it at 320px. Both were measured with the
+     same eleven dead stops. The low-vision supervisor at a desk is the likeliest
+     person to hit this, not the rarest.
+
+     `inert` rather than `visibility: hidden`: it is the primitive this component
+     already chose for <main> below, and it removes the subtree from the
+     accessibility tree as well as the focus order in one attribute — nothing to
+     animate, nothing to re-verify when a future control disables itself. Being
+     React state is exactly why it reads `wideViewport` above instead of asking
+     matchMedia again here: two sources for "below md" is how one of them ends
+     up disagreeing with the CSS. */
+  const navInert = !wideViewport && !drawerOpen;
+
+  /* LOCK THE PAGE UNDER THE OPEN DRAWER. Measured without it: one touch-drag
+     over the scrim scrolled /now by 1300px behind the drawer, and closing it
+     left the operator a thousand pixels from where they had been with nothing
+     saying they had moved. The drawer is modal by every other measure it takes
+     — scrim, `inert` on <main>, Escape, outside-tap — and omitted only this.
+
+     ON documentElement, NOT body, and that is the load-bearing choice.
+     dialog.tsx locks `body.style.overflow` behind a module-level count, and
+     that count is not exported. A second, independent count here would be worse
+     than no lock at all: a Dialog opened on a drawer-navigated page, with the
+     drawer closing under it, would have the two saved values crossed and the
+     page would unlock beneath a live dialog. Two DIFFERENT properties cannot do
+     that — each side saves and restores its own, either one alone stops the
+     viewport scrolling, and whichever unlocks first leaves the other's lock
+     standing. So they compose without sharing anything, and dialog.tsx needs no
+     change.
+
+     The gutter compensation matters at 640px — 200% zoom on a desk machine,
+     which is below `md` and therefore drawer territory — where the classic
+     scrollbar is real and hiding it reflows the page behind the scrim by its
+     width. It is zero on the overlay scrollbars a phone or tablet uses.
+
+     Known gap: iOS Safari can still rubber-band a page locked this way. Closing
+     that costs a `position: fixed` body plus a scroll-position restore, which
+     would fight the scroll position this version preserves for free. */
   React.useEffect(() => {
     if (!drawerOpen) return;
-    const mq = window.matchMedia("(min-width: 48rem)");
-    if (mq.matches) {
-      setDrawerOpen(false);
-      return;
-    }
-    const onChange = (e: MediaQueryListEvent) => {
-      if (e.matches) setDrawerOpen(false);
+    const root = document.documentElement;
+    const overflow = root.style.overflow;
+    const padRight = root.style.paddingRight;
+    const gutter = window.innerWidth - root.clientWidth;
+    if (gutter > 0) root.style.paddingRight = `${gutter}px`;
+    root.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = overflow;
+      root.style.paddingRight = padRight;
     };
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
   }, [drawerOpen]);
 
   const timer = React.useRef(0);
@@ -414,11 +512,37 @@ export function AppShell({
           a floating button was the alternative and would have overlapped page
           content on the smallest screens this app runs on.
 
-          `h-tap` not a smaller bar: it holds a control, and --tap-target is the
-          floor for anything a finger reaches. It is sticky for the same reason
-          the rail is — a control that scrolls away is a control you have to
-          hunt for, which is the bug one layer up. */}
-      <div className="sticky top-0 z-rail flex h-tap shrink-0 items-center justify-between border-b border-line bg-card px-2.5 md:hidden">
+          --tap-target tall and not a pixel less: it holds a control, and that is
+          the floor for anything a finger reaches. It is sticky for the same
+          reason the rail is — a control that scrolls away is a control you have
+          to hunt for, which is the bug one layer up.
+
+          SAFE AREA, and it is a no-op today by construction. Without
+          `viewport-fit=cover` in the app's viewport meta, iOS letterboxes the
+          page inside the safe area and every `env(safe-area-inset-*)` resolves
+          to 0 — measured: this bar renders 44px and `padding-top: 0px` exactly
+          as it did before. But the manifest declares `display: standalone`,
+          i.e. this is meant to run chromeless, and the moment anyone adds
+          `viewport-fit=cover` — the usual next step for a PWA that looks
+          letterboxed — this bar's menu button lands under the Dynamic Island
+          and the drawer's sign-out under the home indicator. Android 15's
+          edge-to-edge default pushes the same way. Pre-empting it costs two
+          declarations that cannot regress anything until that day.
+
+          The height is spelled as a calc rather than `h-tap` + padding because
+          this is a GRID ITEM: give it `min-height` instead of a definite height
+          and `align-content: normal` stretches it to fill the leftover row on
+          any page shorter than the viewport — measured 186px on /clock at
+          390x1400. The calc keeps the target 44px and grows it by exactly what
+          the status bar takes.
+
+          Left and right insets are deliberately not here. Both this bar and the
+          drawer set `px-2.5`, and an `env()` padding utility would REPLACE that
+          10px rather than add to it — a real 10px regression today, in exchange
+          for a landscape-notch case on a device this estate does not run. The
+          calc that would preserve it has to restate the 10px, which is the kind
+          of literal that drifts silently the first time the padding changes. */}
+      <div className="sticky top-0 z-rail flex h-[calc(var(--tap-target)_+_env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-line bg-card px-2.5 pt-[env(safe-area-inset-top)] md:hidden">
         <span
           aria-hidden
           className="grid size-[30px] place-items-center rounded-pill bg-brand text-seal font-extrabold text-white"
@@ -488,6 +612,12 @@ export function AppShell({
         // -1 so the panel itself can take focus when the drawer opens. It is not
         // a tab stop otherwise.
         tabIndex={-1}
+        // Off-canvas AND out of the tab order — see `navInert` for the eleven
+        // dead stops this removes and why a transform alone never could.
+        // Undefined rather than false, the same as <main> below: React renders
+        // `inert=""` for any truthy value and older runtimes stringify `false`
+        // into a live attribute, which would make the rail permanently dead.
+        inert={navInert || undefined}
         // A tap on any destination navigates, and a drawer still covering the
         // page it just navigated to is the thing that makes people think the tap
         // failed. Delegated rather than wired into renderRow because the row may
@@ -667,22 +797,61 @@ export function AppShell({
             be a new defect; overflow-x must stay hidden anyway because
             RailLabel's fade relies on it.
 
-            `scrollbar-width: none`, and this is the one place this system hides
-            an affordance on purpose. The rail's content box is 44px wide at
-            --rail-width; a classic scrollbar takes ~15px of it and would leave
-            every destination a 29px target, breaching --tap-target — a stated
-            floor — to show a control nobody drags in a 64px column. Scrolling
-            still works by wheel, trackpad and touch, keyboard focus scrolls its
-            own row into view, and one hover, Tab or pin takes the rail to 224px
-            where the question does not arise. */}
-        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-x-hidden overflow-y-auto [scrollbar-width:none]">
+            `md:[scrollbar-width:none]`, and this is the one place this system
+            hides an affordance on purpose. The rail's content box is 44px wide
+            at --rail-width; a classic scrollbar takes ~15px of it and would
+            leave every destination a 29px target, breaching --tap-target — a
+            stated floor — to show a control nobody drags in a 64px column.
+            Scrolling still works by wheel, trackpad and touch, keyboard focus
+            scrolls its own row into view, and one hover, Tab or pin takes the
+            rail to 224px where the question does not arise.
+
+            THE `md:` IS THE WHOLE POINT OF THAT SENTENCE. None of it is true of
+            the drawer, which is always 224px wide — there is room for a
+            scrollbar and no competing constraint — and the drawer is where the
+            region actually runs out of height: measured at 667x375 (a phone in
+            landscape) it is 84px tall holding 394px of rows, under two of nine
+            destinations visible, and it was hiding the only cue that the other
+            seven existed. Unscoped, this line inherited the rail's excuse for a
+            case the rail's argument never covered.
+
+            `e911-card-flush` is not decoration either: the rows are laid out
+            flush with this container on every side, and the focus ring is
+            `outline-offset: 2px`, so it painted OUTSIDE the clip rect. Measured
+            in rendered pixels: the left and right ring pixels were identical
+            focused and unfocused, and the first destination — the one a
+            supervisor returns to all shift — kept only a 2px underline. The
+            class is the system's own remedy for exactly this, tokens.css draws
+            the indicator inward for anything inside it, and DataTable's scroll
+            regions have used it since 1.4.3. There is no way for CSS to detect
+            "my indicator would be clipped"; a clipping container has to say so.
+
+            `overscroll-contain` stops a flick that reaches the end of this list
+            from chaining out into the page behind the drawer. */}
+        <div className="e911-card-flush flex min-h-0 flex-1 flex-col gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain md:[scrollbar-width:none]">
           {items.map(renderRow)}
         </div>
 
-        {footerItems?.length || railFooter ? (
-          <div className="flex w-full shrink-0 flex-col gap-1.5 pt-1.5">
+        {/* `max-md:pb-[env(safe-area-inset-bottom)]` — see the mobile bar for why
+            these are here at all. This is the bottom half of that pair: it is
+            the drawer's last row, and the last row is `railSessionAction`, which
+            is what would otherwise sit under the home indicator. It adds to a
+            padding of 0 rather than overriding one, so there is no literal here
+            to drift out of step with the nav's own `py-3.5`. */}
+        {footerItems?.length || railFooter || railSessionAction ? (
+          <div className="flex w-full shrink-0 flex-col gap-1.5 pt-1.5 max-md:pb-[env(safe-area-inset-bottom)]">
             {footerItems?.map(renderRow)}
             {railFooter}
+            {railSessionAction ? (
+              <>
+                {/* The rail's own divider idiom, with `my-1.5` on top of the
+                    column's `gap-1.5`: 6px becomes 25px and a rule, which is
+                    what takes the exit out of the preference toggles' 50px
+                    pitch. See `railSessionAction` for the measurement. */}
+                <div aria-hidden className="my-1.5 h-px w-full shrink-0 bg-line" />
+                {railSessionAction}
+              </>
+            ) : null}
           </div>
         ) : null}
       </nav>

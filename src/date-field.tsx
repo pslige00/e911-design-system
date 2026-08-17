@@ -210,6 +210,17 @@ export interface DateFieldProps {
   className?: string;
   "aria-label"?: string;
   "aria-describedby"?: string;
+  /**
+   * DECLARED, not incidental (1.10.0). `FormField` marks an errored control by
+   * putting `aria-invalid` in the props object it hands its child; until now it
+   * reached the input only through the rest spread, which had two consequences
+   * and both were silent. It was undeclared, so a refactor could have dropped
+   * it. And because the spread sits AFTER this component's own attribute, a
+   * `FormField` with no error spread `undefined` over the field's OWN refusal
+   * mark and un-announced it. Read here instead, alongside `invalid` and the
+   * field's `refused` state, so all three agree.
+   */
+  "aria-invalid"?: boolean | "true" | "false";
 }
 
 export function DateField({
@@ -224,6 +235,7 @@ export function DateField({
   invalid = false,
   size = "md",
   className,
+  "aria-invalid": ariaInvalid,
   ...aria
 }: DateFieldProps) {
   const [open, setOpen] = React.useState(false);
@@ -233,6 +245,14 @@ export function DateField({
   // true whether or not the app has noticed yet.
   const [refusal, setRefusal] = React.useState<DateFieldRejection | null>(null);
   const refused = refusal !== null;
+  // ONE boolean drives both the announcement and the paint. They used to be
+  // separate — `invalid`/`refused` painted the border and a caller's
+  // `aria-invalid` (which is all `FormField` sends) reached only the
+  // accessibility tree — so an errored field was announced invalid and drawn
+  // valid. Two channels disagreeing about the same fact is worse than either
+  // being absent.
+  const showInvalid =
+    invalid || refused || ariaInvalid === true || ariaInvalid === "true";
   const [cursor, setCursor] = React.useState<string>(value || todayIsoDate());
   // Set only by grid interaction, so tabbing to the month buttons doesn't get
   // yanked back into the day grid on the next render.
@@ -352,10 +372,38 @@ export function DateField({
   };
 
   // Move DOM focus onto the cursor cell after the grid re-renders around it.
+  //
+  // The retry is what makes this work ON OPEN, and it is not defensive
+  // padding. `useAnchoredLayer` mounts the popover `visibility: hidden` for the
+  // one frame between mount and measurement, and `focus()` on a hidden element
+  // is a silent no-op. This passive effect runs BEFORE the layout effect's
+  // placement re-render is committed, so the call it makes on the opening frame
+  // has always been thrown away: the calendar opened with focus still on the
+  // trigger, the arrow keys did nothing, and the only way into the day grid was
+  // three Tab presses with a fourth dismissing the popover. rAF puts the retry
+  // after that re-render, which is where the cell is focusable — and gives the
+  // APG date-picker-dialog behaviour of landing on the selected day (or today).
+  //
+  // Arrow-key movement within an open grid lands on the first call and never
+  // schedules a frame, so this costs nothing on the path that already worked.
   React.useEffect(() => {
     if (!open || !focusGrid.current) return;
-    const cell = gridRef.current?.querySelector<HTMLButtonElement>(`[data-iso="${cursor}"]`);
-    cell?.focus();
+    let frame = 0;
+    let tries = 0;
+    const land = () => {
+      const cell = gridRef.current?.querySelector<HTMLButtonElement>(`[data-iso="${cursor}"]`);
+      if (!cell) return;
+      cell.focus();
+      // Bounded. If something else legitimately owns focus, stop rather than
+      // fight the operator for it on every frame for as long as the popover is
+      // open — a calendar that steals focus back is worse than one that never
+      // took it.
+      if (document.activeElement !== cell && (tries += 1) < 5) {
+        frame = requestAnimationFrame(land);
+      }
+    };
+    land();
+    return () => cancelAnimationFrame(frame);
   }, [open, cursor]);
 
   const onGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -427,7 +475,7 @@ export function DateField({
         placeholder="YYYY-MM-DD"
         autoComplete="off"
         spellCheck={false}
-        aria-invalid={invalid || refused || undefined}
+        aria-invalid={showInvalid || undefined}
         onChange={(e) => {
           setDraft(e.target.value);
           // Editing withdraws the refusal: the operator is answering it.
@@ -470,16 +518,29 @@ export function DateField({
           // three: a faded YYYY-MM-DD is exactly the string an operator has to
           // read digit by digit to see why the form will not move.
           //
-          // These are (0,2,0) and so they also beat `border-bad` below at
-          // (0,1,0) — deliberately. A disabled field must not shout "bad": the
+          // These are (0,2,0). A disabled field must not shout "bad": the
           // operator cannot answer a complaint about a field they cannot type
           // in, and the red would send them hunting for a fix that is not there.
+          // That ordering is now held by the `:enabled` guard below rather than
+          // by (0,2,0)-beats-(0,1,0) — see there.
           "disabled:cursor-not-allowed",
           "disabled:border-line-disabled disabled:bg-disabled disabled:text-disabled-fg",
-          // `refused` is the field's own mark; `invalid` is the app's. Either
-          // one paints the bad border, and a refusal shows immediately rather
-          // than waiting for a render the app might not do.
-          invalid || refused ? "border-bad" : "border-line-control"
+          // `refused` is the field's own mark; `invalid` is the app's; a
+          // caller's `aria-invalid` is `FormField`'s. Any of the three paints
+          // the bad border, and a refusal shows immediately rather than waiting
+          // for a render the app might not do.
+          showInvalid ? "border-bad" : "border-line-control",
+          // The line above states the intent; THIS one is what makes it survive
+          // a caller. `FormField` hands its child a className carrying its own
+          // `border-line-control`, and because `cn` is a plain join both land in
+          // the attribute — where the two are each (0,1,0) and the SHEET's order
+          // decides. It decides for grey, in both themes (measured), so a leave
+          // request with a refused date got a red sentence under a grey field.
+          // Keying the bad stroke off the attribute assistive tech already reads
+          // makes it (0,3,0), which no caller-supplied utility can tie with, and
+          // makes the two channels physically the same fact. `:enabled` keeps
+          // the disabled utilities above winning, as they did before.
+          "enabled:aria-invalid:border-bad"
         )}
         {...aria}
       />
@@ -537,8 +598,19 @@ export function DateField({
             </button>
           </div>
 
-          <div ref={gridRef} role="grid" aria-labelledby={gridLabelId} onKeyDown={onGridKeyDown}>
-            <div role="row" className="grid grid-cols-7">
+          {/* `gap-0.5` on the container and on every row (1.10.0): the 44px day
+              cells used to touch on all four sides, so a miss always landed on
+              a live neighbour — the wrong leave date — rather than on nothing.
+              The header row carries the same gap or its seven columns stop
+              lining up with the seven below it. Costs 12px of popover width. */}
+          <div
+            ref={gridRef}
+            role="grid"
+            aria-labelledby={gridLabelId}
+            onKeyDown={onGridKeyDown}
+            className="flex flex-col gap-0.5"
+          >
+            <div role="row" className="grid grid-cols-7 gap-0.5">
               {WEEKDAY_NAMES.map((name) => (
                 <div
                   key={name}
@@ -553,7 +625,7 @@ export function DateField({
               ))}
             </div>
             {[0, 1, 2, 3, 4, 5].map((week) => (
-              <div key={week} role="row" className="grid grid-cols-7">
+              <div key={week} role="row" className="grid grid-cols-7 gap-0.5">
                 {cells.slice(week * 7, week * 7 + 7).map((cell) => {
                   const iso = formatIsoDate(cell);
                   const outside = cell.m !== viewM;

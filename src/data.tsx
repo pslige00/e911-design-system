@@ -32,12 +32,22 @@ export interface DomainCardProps
       collapse — use for tables. */
   title?: React.ReactNode;
   /**
-   * Heading rung for `title`. Defaults to 3, which is what this component
-   * hard-coded until 1.4.0 — and which no page could make correct: a Ribbon
-   * renders the page's h1, so a card under it jumped h1 → h3 with no h2 on
-   * every screen in every app. The first consumer bridged it with `sr-only`
-   * <h2>s of its own, which works and which the next app would have had to
-   * invent again. Say what rung the card actually sits on instead.
+   * Heading rung for `title`. Defaults to **2**, which is the case a card is
+   * almost always in: a Ribbon renders the page's h1, so a card directly under
+   * it is the page's second rung.
+   *
+   * It defaulted to 3 until 1.10.0, which is what this component hard-coded
+   * until 1.4.0 — and which no page could make correct: a card under a Ribbon
+   * jumped h1 → h3 with no h2 on every screen in every app. 1.4.0 added the
+   * prop and LEFT THE DEFAULT AT 3, so the trap it was built to remove stayed
+   * armed: 6 of the 57 files using DomainCard in the first consuming app passed
+   * it, and an audit found the h1 → h3 skip on 17 of 21 routes. One of those
+   * routes had eleven h3s and no h2 — one flat rung, so "jump by section" did
+   * nothing. A default that is wrong at 51 of 57 call sites is not an escape
+   * hatch, it is the bug with a workaround beside it.
+   *
+   * Pass 3 (or lower) for a card genuinely nested under another card's h2, and
+   * 2 stays correct without a prop everywhere else.
    *
    * Sizing does NOT follow the level: a card title is --font-size-h3 whatever
    * its rung, because the outline is about structure and the type scale is
@@ -53,7 +63,7 @@ export interface DomainCardProps
 export function DomainCard({
   edge,
   title,
-  titleLevel = 3,
+  titleLevel = 2,
   headerRight,
   flush = false,
   className,
@@ -78,6 +88,25 @@ export function DomainCard({
       aria-labelledby={ariaLabelledBy ?? (title != null && !ariaLabel ? titleId : undefined)}
       aria-label={ariaLabel}
       className={cn(
+        // `relative` is NOT layout here — nothing inside is positioned against
+        // it — it is what makes `overflow-hidden` on the next line actually
+        // clip. An absolutely-positioned descendant with no positioned ancestor
+        // resolves against the INITIAL containing block, and an overflow
+        // ancestor only clips what its own containing block contains, so such a
+        // descendant escapes the card entirely. `.sr-only` is
+        // `position: absolute`, the system encourages it inside cards and
+        // tables, and it is 1px of invisible text — so the escape presents as a
+        // page that scrolls sideways for no visible reason. Measured on one
+        // consumer's /admin at 390px: 170 escaped `.sr-only` nodes, the
+        // furthest at x=445, and `documentElement.scrollWidth` 446 against a
+        // 390 viewport (WCAG 1.4.10 Reflow). Adding this took it to exactly 390.
+        //
+        // dialog.tsx documents the same escape mechanism for its own case and
+        // RELIES on it — a Dialog is `position: fixed`, which `relative` does
+        // not capture (only a transformed ancestor does), so floating layers
+        // are unaffected. Select, Tooltip and DateField's calendar are all
+        // fixed for that reason.
+        "relative",
         // rounded-md, not bare `rounded`: the bare utility reads Tailwind v4's
         // deprecated --radius key, which is one more thing that has to be right.
         "min-w-0 overflow-hidden rounded-md border border-line bg-card shadow-card",
@@ -164,7 +193,14 @@ export function KpiCard({ edge, label, value, delta, sub, className }: KpiCardPr
                 // scans source as raw TEXT and does not know what a comment is.
                 // Do not write a bracketed utility in a comment in this repo,
                 // even to say you are removing it.
-                "rounded-xs px-1.5 py-px font-mono text-badge font-medium",
+                // `whitespace-nowrap` because a KPI strip is a GLANCE surface
+                // and the pill is sized by its content: "−19" measured 30×17
+                // and "6 short" 42×32 at every viewport, so four cards in a row
+                // showed pills at two different heights. That reads as a
+                // rendering fault in the half-second the strip gets, which is
+                // the opposite of what the strip is for. Nothing is clipped —
+                // the pill simply grows sideways into the card's own padding.
+                "whitespace-nowrap rounded-xs px-1.5 py-px font-mono text-badge font-medium",
                 delta.direction === "up" && "bg-ok-soft text-ok",
                 delta.direction === "down" && "bg-bad-soft text-bad",
                 delta.direction === "flat" && "bg-tint text-muted"
@@ -346,6 +382,46 @@ export function DataTable<Row>({
   loadingRows = 5,
   ...rest
 }: DataTableProps<Row>) {
+  // WHETHER THE SCROLL REGION BELOW IS A TAB STOP AND A LANDMARK IS MEASURED,
+  // NOT ASSUMED. Both were unconditional until 1.10.0, and at desktop widths a
+  // DataTable almost never overflows: an audit of one consuming app at 1280px
+  // found every region in it with `scrollWidth === clientWidth` and all of them
+  // still carrying `tabIndex=0` + `role="region"` + a name. Three of the live
+  // board's seventeen tab stops were scroll boxes with nothing to scroll, and
+  // every table was a second near-duplicate landmark inside its own card —
+  // "Staffed against minimum" containing "Staffing by position against minimum
+  // staffing", 13 landmarks on a page that has 6 things on it, and on one route
+  // the two names matched exactly and axe raised `landmark-unique`.
+  //
+  // Hooks live ABOVE the empty-table early return because they must: React
+  // requires the same hooks in the same order on every render, and a table that
+  // starts empty and later has rows re-renders through this function both ways.
+  //
+  // A callback ref rather than useRef + a dependency list, so the observer
+  // follows the DOM node: the early return below unmounts the box entirely, and
+  // this is then called with null and the effect tears down on its own.
+  const [box, setBox] = React.useState<HTMLDivElement | null>(null);
+  const [scrollable, setScrollable] = React.useState(false);
+  React.useEffect(() => {
+    if (!box) return;
+    const measure = () => setScrollable(box.scrollWidth > box.clientWidth);
+    measure();
+    // Guarded because this module is rendered under jsdom by consumers' unit
+    // tests, where ResizeObserver does not exist and an unguarded `new` is a
+    // ReferenceError that takes the whole test file with it. Without an
+    // observer the region keeps its first measurement, which is the pre-1.10.0
+    // behaviour minus the false tab stop.
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(box); // the viewport side: the card gets narrower
+    // The content side, and NOT optional: the table is `min-w-max`, so rows
+    // arriving or a column widening changes what has to fit without the box
+    // itself resizing at all. Observing only the box leaves a table that
+    // silently became scrollable unreachable from the keyboard.
+    const table = box.querySelector("table");
+    if (table) ro.observe(table);
+    return () => ro.disconnect();
+  }, [box]);
   // `loading` outranks the empty path — see the prop. An empty state that
   // flashes before the rows land is worse than none, because it is a sentence
   // the operator believes and acts on.
@@ -369,14 +445,16 @@ export function DataTable<Row>({
          div of their own, which is the system being asked for something six
          times and not answering.
 
-         tabIndex + role + name are the accessibility half, and they are not
-         optional decoration: a region that scrolls is content a keyboard user
-         must be able to reach, and a container that only a pointer can pan is
-         a 2.1.1 failure on the same grounds this component already refused to
+         tabIndex + role + name are the accessibility half, and WHILE THE BOX
+         SCROLLS they are not optional decoration: content a keyboard user must
+         be able to reach, and a container that only a pointer can pan is a
+         2.1.1 failure on the same grounds this component already refused to
          let `onRowClick` navigate a row. Naming the region duplicates the
          table's own name by design — "Exception queue region", then "Exception
          queue table" — which is what a <caption> would give if this component
          had one, and an anonymous tab stop is worse than a repeated word.
+         While it does NOT scroll, all three are noise — see the measurement at
+         the top of this function.
 
          NO FOCUS RING HERE. tokens.css draws one indicator for the whole
          system; a local ring is how one control ends up with a different one.
@@ -388,14 +466,29 @@ export function DataTable<Row>({
          axis's `visible` to `auto`. A `position: sticky` thead would then stick
          to this box rather than to the viewport, and this box never scrolls
          vertically — so the header would simply stop sticking, silently. */
-      tabIndex={0}
-      role="region"
+      ref={setBox}
+      // -1 rather than no attribute at all: a window widened while focus sits
+      // on this box would otherwise drop focus to <body>, which is the reset
+      // that loses a keyboard user their place mid-shift. -1 keeps the node
+      // focusable programmatically and out of the tab order.
+      tabIndex={scrollable ? 0 : -1}
+      role={scrollable ? "region" : undefined}
       // Falls back to a generic name rather than going unnamed: role="region"
       // with no accessible name is not exposed as a landmark at all (the same
       // trap DomainCard's <section> was in), and the fallback at least tells a
-      // keyboard user what they have landed on. Pass `aria-label`.
-      aria-label={rest["aria-label"] ?? "Table"}
-      className="overflow-x-auto"
+      // keyboard user what they have landed on. Pass `aria-label`. Dropped
+      // with the role when there is nothing to scroll — a name on a roleless
+      // div names nothing, and `rest` still spreads the same label onto the
+      // <table> below, which is the name that was always doing the work.
+      aria-label={scrollable ? (rest["aria-label"] ?? "Table") : undefined}
+      // `relative` for the same reason DomainCard now carries it — see the long
+      // note there. Without it the `.sr-only` text inside these cells resolves
+      // against the initial containing block, is laid out at its static
+      // position inside the scrolled-away part of the table, escapes this box's
+      // clip and widens the DOCUMENT. Belt and braces with the card: either one
+      // alone fixed the measured case, and a DataTable is also used outside a
+      // DomainCard, where the card's `relative` is not there to save it.
+      className="relative overflow-x-auto"
     >
       {loading ? (
         // aria-busy says "this is in flux" to a reader already on the table; a
@@ -585,9 +678,48 @@ export interface FormFieldProps {
    * alongside this one; both take the same prop and the same values.
    */
   size?: Extract<ControlSize, "md" | "tap">;
+  /**
+   * Whether an answer is REQUIRED (1.10.0). Until then the system had no way to
+   * say so at all: an audit of one consuming app found 51 controls across seven
+   * screens, every one of them `required=false` and `aria-required=null`, on
+   * forms where a dispatcher is shown "Kind of leave", "First day off", "Hours
+   * in total" with nothing to say which of them may be left alone. WCAG 3.3.2
+   * Labels or Instructions. That app's `/login`, the one form that does NOT go
+   * through this component, gets it right with native `required` — which is the
+   * shape of the gap exactly.
+   *
+   * Sets three things, and all three are needed:
+   *  · native `required` on the child, for the constraint the browser enforces;
+   *  · `aria-required`, because Select's trigger is a <button> and DateField's
+   *    is a composite, and native `required` means nothing on either;
+   *  · a WORD in the visible <label>, so it is in the accessible name. Not an
+   *    asterisk and not a colour — a bare `*` is unpronounced by some AT and
+   *    meaningless to anyone who has not been told the convention, and colour
+   *    alone is 1.4.1.
+   */
+  required?: boolean;
   children: (props: {
     id: string;
+    /** Native `required`, and a real attribute on a real control — see the prop. */
+    required?: boolean;
+    /**
+     * The error state, and the ONLY channel that carries it to a control
+     * (1.10.0). `className` cannot: `border-bad` from here and a control's own
+     * `border-line-control` both land on the element, `cn` is a plain join so
+     * neither wins on specificity, and the cascade picks the grey. That is how
+     * a field came to be announced invalid and drawn valid — one red sentence
+     * under a form of five controls, and no red control.
+     *
+     * Select and DateField escalate off THIS attribute, at
+     * `:enabled[aria-invalid="true"]` — specificity (0,3,0), which a caller's
+     * (0,1,0) class cannot tie, so the fix does not depend on `cn` or on emit
+     * order. A real ARIA attribute was chosen over a bespoke `invalid` prop for
+     * one reason: apps write `<input {...props} />`, and a non-DOM prop makes
+     * React log "Received `true` for a non-boolean attribute" for every native
+     * control in error. This spreads onto anything.
+     */
     "aria-invalid"?: boolean;
+    "aria-required"?: boolean;
     "aria-describedby"?: string;
     className: string;
   }) => React.ReactNode;
@@ -597,16 +729,66 @@ export interface FormFieldProps {
  * Validation/error placement is a system decision, not a per-form one:
  * label above, control, hint OR error below (error wins).
  */
-export function FormField({ id, label, hint, error, size = "md", children }: FormFieldProps) {
+export function FormField({
+  id,
+  label,
+  hint,
+  error,
+  size = "md",
+  required = false,
+  children,
+}: FormFieldProps) {
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  // THE ERROR IS ALSO A STATUS MESSAGE, AND UNTIL 1.10.0 IT WAS ONLY A
+  // DESCRIPTION. `aria-describedby` below is correct and stays — but a
+  // description is spoken when you ENTER the field, so an operator who types a
+  // wrong confirmation and tabs on hears nothing at all, while the sighted
+  // operator watches red appear (WCAG 4.1.3 Status Messages, AA). Traced on one
+  // consumer's /pin: `aria-invalid` and `aria-describedby` both landed, the
+  // error span was inserted with `role: null, aria-live: null`, and the page's
+  // own live regions stayed empty.
+  //
+  // `seq` is why this is a state pair rather than just rendering {error} into a
+  // region. The region must be MOUNTED FROM FIRST RENDER AND EMPTY — a live
+  // region that appears at the same instant it gains text is not reliably
+  // announced, which is also why `role="alert"` on the visible span is the
+  // weaker fix — and the seq keys its child so that an error which is cleared
+  // and set again to the same string replaces a DOM node rather than
+  // reconciling to no change at all. Same pattern the first consuming app
+  // arrived at for its live board, and for the same reason.
+  //
+  // Assigning during render (React's documented "adjust state when a prop
+  // changes"): the alternative is useEffect, which announces one paint LATE,
+  // and this region is the whole point.
+  const [live, setLive] = React.useState({ seq: 0, text: "", from: error });
+  if (live.from !== error) {
+    // Deliberately NOT announced on mount — `from` is seeded with the incoming
+    // error, so a field that renders already invalid (a server-rendered form
+    // coming back with five of them) says nothing. That is not news; it is the
+    // state of the page, and `aria-describedby` covers it.
+    setLive({ seq: live.seq + 1, text: error ?? "", from: error });
+  }
   return (
     <div className="flex max-w-[340px] flex-col gap-1.5">
       <label htmlFor={id} className="text-ribbon-meta font-medium text-muted">
         {label}
+        {required ? (
+          // Inside the <label>, so it is part of the control's accessible name
+          // and not a separate thing to go and find. text-faint, the same tier
+          // as the hint below, because it is an annotation on the label rather
+          // than a second label. The space is a real character rather than a
+          // margin: name computation concatenates text nodes and is not
+          // required to insert one at an element boundary, so a margin would
+          // read correctly and announce "First day off(required)".
+          <span className="font-normal text-faint">{" (required)"}</span>
+        ) : null}
       </label>
       {children({
         id,
+        required: required || undefined,
         "aria-invalid": error ? true : undefined,
+        // Alongside native `required`, not instead of it — see the prop.
+        "aria-required": required || undefined,
         "aria-describedby": describedBy,
         className: cn(
           CONTROL_HEIGHT[size],
@@ -639,6 +821,15 @@ export function FormField({ id, label, hint, error, size = "md", children }: For
           {hint}
         </span>
       ) : null}
+      {/* MOUNTED HERE ON EVERY RENDER AND EMPTY UNTIL THERE IS NEWS — see the
+          note above; moving it inside the `error ?` branch above would recreate
+          exactly the defect it fixes. The label rides along because a polite
+          region is heard out of context: "Those do not match." on a form of
+          five controls does not say which one, and the reader has by then
+          tabbed away from it. */}
+      <span role="status" aria-live="polite" className="sr-only">
+        <span key={live.seq}>{live.text ? `${label}: ${live.text}` : ""}</span>
+      </span>
     </div>
   );
 }

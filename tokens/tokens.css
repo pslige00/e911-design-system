@@ -458,6 +458,11 @@
   --shadow-pop:  0 8px 30px -12px rgba(49, 38, 28, 0.28);
 
   /* component metrics (density: Terrazzo) */
+  /* DESK VALUES. Both are raised — to 44 and 36 — under the
+     `@media (pointer: coarse)` block at the end of this file, because the floor
+     below is a promise and 32/28 was not keeping it. Read that block before
+     quoting either number: on the wall tablets these apps were built for, the
+     one this file is loudest about, they are not what ships. */
   --control-height: 32px;
   --control-height-sm: 28px;
   --tap-target: 44px;              /* touch floor — these apps run on wall tablets,
@@ -1015,14 +1020,94 @@
      screen with a field on it, and the consuming app's own guard would refuse
      the raw class anyway. A control's size is this file's business.
 
-   The whole control FAMILY moves, not just the elements that zoom. Only
-   <input>, <textarea> and <select> trigger the behaviour, but a form whose
-   input is 16px and whose checkbox label is 13px looks broken, and the token
-   names a family. --control-height is untouched and independent by design (see
-   CONTROL_HEIGHT in core.tsx); 16px at the inherited 1.5 is a 24px line box,
-   which fits the 32px control with 4px to spare, and fits --tap-target easily. */
+   THE FAMILY CLAIM, CORRECTED (1.10.0). This paragraph used to say "the whole
+   control FAMILY moves, not just the elements that zoom", on the grounds that a
+   form whose input is 16px and whose checkbox label is 13px looks broken. A
+   sweep of four viewports across eighteen routes in a genuine coarse-pointer
+   context did not support it. --font-size-control had five consumers —
+   data.tsx, choice.tsx, date-field.tsx and select.tsx twice — so on one page a
+   Select trigger rendered at 16px and the Button beside it at 13.5px:
+   `input 16px` x160 against `button 13.5px` x327 and `a 13.5px` x376. The
+   mismatch this paragraph set out to prevent was the mismatch it shipped, and
+   the paragraph was the only evidence anyone would have checked.
+
+   Half of it is now true rather than claimed: Button takes `text-control`
+   instead of `text-body` (core.tsx), which is the token a control's own text
+   was always meant to use, so the form family — input, textarea, Select trigger
+   and its options, Checkbox/Radio label, Button — moves together and "Clock in"
+   is 16px on the tablet it is pressed on.
+
+   The other half is REFUSED, and this is the boundary. --font-size-body
+   (13.5px) and --font-size-ui-sm (12px) stay put. `body` is PROSE — every
+   paragraph, hint and caption in the app — and enlarging prose on a touch
+   device is a different decision from fixing a zoom bug, taken for different
+   reasons, at a blast radius nothing has measured. `ui-sm` is the Chip, the
+   Tab, the calendar day: those are finger TARGETS, and a target's answer to a
+   touch device is height, which is the block below. One query, two instruments,
+   each aimed at the problem it can actually hit.
+
+   16px at the inherited 1.5 is a 24px line box, which fits the 32px desk
+   control with 4px to spare and the 44px touch control easily.
+
+   ---------------------------------------------------------------------------
+   THE 44px TARGET ON TOUCH (1.10.0). --control-height was untouched here and
+   documented as "independent by design" until a sweep measured what that
+   independence ships: on a wall tablet the MAJORITY of this system's controls
+   are 28-32px, against the --tap-target three hundred lines up whose own
+   comment calls 44px the "touch floor — these apps run on wall tablets, so
+   anything finger-reachable is >= this". 196 Chips at 28px, 256 chip-shaped
+   links at 28px, ~100 inputs and Select triggers at 31-32px, 12 Buttons at
+   32px. Nothing in the app is under the WCAG 2.5.8 AA floor of 24x24 and none
+   of this is a normative failure — what fails is 2.5.5 Target Size (Enhanced,
+   AAA) and the sentence this file wrote itself, which is the one that matters,
+   because it is the promise the consuming apps were built on.
+
+   SAME ARGUMENT AS THE FONT SIZE, WHICH IS WHY IT IS THE SAME BLOCK: the bug is
+   a fact about the DEVICE. And `pointer: coarse` is the PRIMARY input
+   mechanism, not "has a touchscreen somewhere" — a desk machine with a
+   touchscreen and a mouse reports `fine` and is not moved by anything here.
+   That is what keeps a blanket raise from being blunt: every surface it reaches
+   is one somebody stands in front of and pokes.
+
+   RAISED AT THE TOKEN, NOT AT THE COMPONENT. The narrower alternative —
+   defaulting Chip to size="tap" under a coarse pointer — looks tighter and is
+   worse: a component cannot read a media query at render time, so it would have
+   to be a `pointer-coarse:` Tailwind variant in core.tsx, which exists in the
+   v4 port and does NOT exist in the v3 preset. One port would silently keep
+   28px, which is this package's oldest failure shape. A media query here is
+   read identically by both ports, needs no consumer change, and moves every
+   h-ctl / h-ctl-sm control in every E911 app at once.
+
+   36 AND NOT 44 FOR sm, deliberately: if `sm` were 44 it would BE `tap`, and
+   the size would stop meaning anything — a filter row as tall as the primary
+   action beside it. 36px clears 24x24 with half again to spare and keeps the
+   ramp; a chip row that is itself the primary target still asks for
+   size="tap" explicitly. The arithmetic holds at both: --font-size-ui-sm (12px,
+   the Chip's label) at the inherited 1.5 is an 18px line box inside 36px, and
+   the 24px line box above sits inside 44px.
+
+   THE HIT-AREA EXTENDERS, CHECKED RATHER THAN ASSUMED. Two components reach
+   44px by growing a pseudo-element instead of the box: `Select` at size="md"
+   (before:-inset-y-1.5, 32 painted + 12 = 44 reachable) and the `Toast` action
+   (h-ctl-sm + before:-inset-y-2). Raising the painted box under this query
+   makes those 44+12=56 and 36+16=52, which reads like a collision waiting to
+   happen and is why the Select file already drops its extender at size="tap".
+   Measured on the unfixed server with --control-height forced to 44px live, in
+   a coarse-pointer context, across /admin/policy (40 controls, the densest form
+   in the app), /admin/shifts and /admin/holidays: ZERO overlapping hit-area
+   pairs, before or after. The overhang is 6px per side either way — raising the
+   painted height moves the neighbours apart, not together, so the gaps the
+   extenders reach into are the same gaps. What the raise does do is make those
+   extenders REDUNDANT: 12px of hit area that buys nothing once the box is
+   already --tap-target. That is the same condition select.tsx tests for at
+   size="tap"; the guard is simply keyed to the size NAME rather than to the
+   resolved height, and rekeying it belongs in select.tsx, not here. Recorded
+   because a future reader who finds a 56px hit area deserves to know it was
+   measured and not missed. */
 @media (pointer: coarse) {
   :root {
     --font-size-control: 16px;
+    --control-height: 44px;
+    --control-height-sm: 36px;
   }
 }
